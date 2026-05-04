@@ -16,21 +16,8 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .bs{background:rgba(59,130,246,.2);color:#93c5fd}
 .xbtn{background:#ef4444;border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .xbtn:active{transform:scale(.9)}
-
 .cam{flex:1;position:relative;background:#000;overflow:hidden}
 .cam video{width:100%;height:100%;object-fit:cover}
-
-/* Library scanner container */
-#libReader{width:100%!important;height:100%!important;border:none!important;position:absolute;top:0;left:0}
-#libReader video{width:100%!important;height:100%!important;object-fit:cover!important}
-#libReader img[alt="Info icon"],#libReader__header_message,#libReader__status_span{display:none!important}
-#libReader__dashboard{position:absolute!important;bottom:0!important;left:0!important;right:0!important;background:rgba(0,0,0,.75)!important;padding:6px 8px!important;z-index:5;max-height:50px;overflow:hidden}
-#libReader__dashboard button{background:#10b981!important;color:#fff!important;border:none!important;padding:5px 10px!important;border-radius:6px!important;font-weight:600!important;font-size:.72rem!important}
-#libReader__dashboard select{background:#333!important;color:#fff!important;border:1px solid #555!important;padding:4px 6px!important;border-radius:4px!important;font-size:.72rem!important}
-#libReader__dashboard span,#libReader__dashboard a{color:#ccc!important;font-size:.68rem!important}
-#libReader__scan_region{min-height:80px!important;overflow:hidden!important}
-#libReader__scan_region img{display:none!important}
-
 .panel{padding:12px 14px;background:#1e293b;flex-shrink:0}
 .status{text-align:center;font-size:.85rem;color:#94a3b8;margin-bottom:8px}
 .status.ok{color:#10b981;font-weight:600}
@@ -48,18 +35,24 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .tips{font-size:.72rem;color:#64748b;text-align:center;padding:6px;line-height:1.4}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
 .toast.show{display:block}
-
 .errbox{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:10;padding:24px;text-align:center;flex-direction:column;align-items:center;justify-content:center}
 .errbox.show{display:flex}
 .errbox .icon{font-size:3rem;margin-bottom:12px}
 .errbox .title{font-size:1rem;font-weight:700;color:#ef4444;margin-bottom:8px}
 .errbox .desc{font-size:.85rem;color:#94a3b8;margin-bottom:16px;line-height:1.6}
-
 .loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
 .spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-.mode-badge{position:absolute;top:8px;left:8px;z-index:6;font-size:.65rem;padding:4px 10px;border-radius:16px;font-weight:600;background:rgba(0,0,0,.6);color:#94a3b8;backdrop-filter:blur(4px)}
+.mbadge{position:absolute;top:8px;left:8px;z-index:6;font-size:.65rem;padding:4px 10px;border-radius:16px;font-weight:600;background:rgba(0,0,0,.6);color:#94a3b8;backdrop-filter:blur(4px)}
+.scan-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:3}
+.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(75vw,280px);height:min(50vw,180px);border:2px solid rgba(255,255,255,.25);border-radius:12px}
+.scan-frame .c{position:absolute;width:min(7vw,24px);height:min(7vw,24px);border:3px solid #10b981}
+.scan-frame .c.tl{top:-1px;left:-1px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
+.scan-frame .c.tr{top:-1px;right:-1px;border-left:none;border-bottom:none;border-radius:0 8px 0 0}
+.scan-frame .c.bl{bottom:-1px;left:-1px;border-right:none;border-top:none;border-radius:0 0 0 8px}
+.scan-frame .c.br{bottom:-1px;right:-1px;border-left:none;border-top:none;border-radius:0 0 8px 0}
+.scan-line{position:absolute;left:10%;width:80%;height:2px;background:linear-gradient(90deg,transparent,#10b981,transparent);animation:scanmove 2s ease-in-out infinite;z-index:4;pointer-events:none}
+@keyframes scanmove{0%{top:20%}50%{top:75%}100%{top:20%}}
 </style>
 </head>
 <body>
@@ -70,32 +63,34 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
   </div>
 
   <div class="cam" id="camArea">
-    <!-- Native mode: video element -->
     <video id="vid" autoplay muted playsinline style="display:none"></video>
-    
-    <!-- Library mode: div container -->
-    <div id="libReader" style="display:none"></div>
-    
-    <!-- Mode indicator -->
-    <div class="mode-badge" id="modeBadge"></div>
+    <div class="mbadge" id="modeBadge">Memuat...</div>
+
+    <div class="scan-overlay" id="scanOverlay">
+      <div class="scan-frame">
+        <div class="c tl"></div><div class="c tr"></div>
+        <div class="c bl"></div><div class="c br"></div>
+      </div>
+      <div class="scan-line"></div>
+    </div>
 
     <div class="errbox" id="errbox">
       <div class="icon">📷</div>
       <div class="title" id="errT">Kamera Error</div>
-      <div class="desc" id="errD">Tidak bisa mengakses kamera</div>
-      <button class="btn btn-ok" onclick="init()" style="max-width:200px;margin-bottom:8px">🔄 Coba Lagi</button>
+      <div class="desc" id="errD">Tidak bisa akses kamera</div>
+      <button class="btn btn-ok" onclick="startAll()" style="max-width:200px;margin-bottom:8px">🔄 Coba Lagi</button>
       <button class="btn btn-no" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
     </div>
 
     <div class="loading" id="loadMsg">
       <div class="spinner"></div>
-      <div id="loadText">Memulai scanner...</div>
+      <div id="loadText">Memuat scanner...</div>
     </div>
   </div>
 
   <div class="panel">
     <div class="status" id="status">Memulai...</div>
-    <div class="tips" id="tips">💡 Dekatkan kamera ke barcode. Pastikan terlihat jelas.</div>
+    <div class="tips" id="tips">💡 Dekatkan & pastikan barcode terlihat jelas di dalam kotak.</div>
     <div class="result" id="resBox">
       <div class="typ" id="resTyp">-</div>
       <div class="val" id="resVal">-</div>
@@ -119,50 +114,50 @@ var scanTarget = params.get('target') || 'pesanan';
 var scanType = params.get('type') || 'barcode';
 
 var bdg = document.getElementById('badge');
-if (scanTarget === 'resi') { bdg.textContent = '🚚 Resi'; bdg.className = 'badge br'; }
-else if (scanTarget === 'search') { bdg.textContent = '🔍 Cari'; bdg.className = 'badge bs'; }
-else { bdg.textContent = '📋 Pesanan'; bdg.className = 'badge bp'; }
+if (scanTarget === 'resi') {
+  bdg.textContent = '🚚 Resi';
+  bdg.className = 'badge br';
+} else if (scanTarget === 'search') {
+  bdg.textContent = '🔍 Cari';
+  bdg.className = 'badge bs';
+} else {
+  bdg.textContent = '📋 Pesanan';
+  bdg.className = 'badge bp';
+}
 
 // ====================================================
 // VARIABLES
 // ====================================================
 var video = document.getElementById('vid');
-var stream = null;
-var detector = null;
+var camStream = null;
 var scanning = false;
 var lastResult = '';
-var animId = null;
+var frameId = null;
 var audioCtx = null;
-var scanMode = 'none'; // 'native' or 'library'
-var libScanner = null;
-var libLoaded = false;
+var barcodeDetectorReady = false;
 
 // ====================================================
 // AUDIO
 // ====================================================
 function beep() {
   try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var o = audioCtx.createOscillator();
-    var g = audioCtx.createGain();
-    o.connect(g);
-    g.connect(audioCtx.destination);
-    o.frequency.value = 1200;
-    g.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    o.start();
-    o.stop(audioCtx.currentTime + 0.15);
-    setTimeout(function() {
-      var o2 = audioCtx.createOscillator();
-      var g2 = audioCtx.createGain();
-      o2.connect(g2);
-      g2.connect(audioCtx.destination);
-      o2.frequency.value = 1600;
-      g2.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-      o2.start();
-      o2.stop(audioCtx.currentTime + 0.2);
-    }, 180);
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    function tone(freq, delay, dur) {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.frequency.value = freq;
+      var t = audioCtx.currentTime + delay;
+      g.gain.setValueAtTime(0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.start(t);
+      o.stop(t + dur);
+    }
+    tone(1200, 0, 0.15);
+    tone(1600, 0.18, 0.2);
   } catch (e) {}
 }
 
@@ -179,48 +174,56 @@ function setStatus(msg, type) {
   el.className = 'status' + (type ? ' ' + type : '');
 }
 
-function setLoad(msg) {
-  document.getElementById('loadMsg').style.display = 'flex';
-  document.getElementById('loadText').textContent = msg;
-}
-
-function hideLoad() {
-  document.getElementById('loadMsg').style.display = 'none';
-}
-
 // ====================================================
-// DETECT MODE: Native vs Library
+// STEP 1: LOAD POLYFILL (agar BarcodeDetector ada di semua browser)
 // ====================================================
-function hasBarcodeDetector() {
-  return ('BarcodeDetector' in window);
-}
-
-// ====================================================
-// INIT
-// ====================================================
-function init() {
-  document.getElementById('errbox').classList.remove('show');
-  
-  if (hasBarcodeDetector()) {
-    // Android Chrome → pakai native BarcodeDetector
-    scanMode = 'native';
-    document.getElementById('modeBadge').textContent = '⚡ Native Scanner';
-    startNative();
-  } else {
-    // PC Chrome / Firefox → pakai html5-qrcode library
-    scanMode = 'library';
-    document.getElementById('modeBadge').textContent = '📦 Library Scanner';
-    startLibrary();
+function loadPolyfill(callback) {
+  // Jika sudah ada native BarcodeDetector → langsung pakai
+  if ('BarcodeDetector' in window) {
+    document.getElementById('modeBadge').textContent = '⚡ Native';
+    callback();
+    return;
   }
+
+  // Load polyfill dari CDN
+  document.getElementById('loadText').textContent = 'Memuat barcode engine...';
+  document.getElementById('modeBadge').textContent = '📦 Loading...';
+
+  var script = document.createElement('script');
+  script.src = 'https://fastly.jsdelivr.net/npm/barcode-detector@2/dist/es/polyfill.min.js';
+  script.onload = function() {
+    document.getElementById('modeBadge').textContent = '📦 Polyfill';
+    callback();
+  };
+  script.onerror = function() {
+    // Coba CDN alternatif
+    var script2 = document.createElement('script');
+    script2.src = 'https://unpkg.com/barcode-detector@2/dist/es/polyfill.min.js';
+    script2.onload = function() {
+      document.getElementById('modeBadge').textContent = '📦 Polyfill';
+      callback();
+    };
+    script2.onerror = function() {
+      document.getElementById('modeBadge').textContent = '❌ Gagal';
+      showError('📦 Gagal Memuat Engine', 'Library barcode scanner gagal dimuat. Periksa koneksi internet lalu coba lagi.');
+    };
+    document.head.appendChild(script2);
+  };
+  document.head.appendChild(script);
 }
 
 // ====================================================
-// MODE 1: NATIVE BarcodeDetector (Android)
+// STEP 2: START CAMERA
 // ====================================================
-function startNative() {
-  setLoad('Meminta izin kamera...');
-  video.style.display = 'none';
+function startCamera(callback) {
+  document.getElementById('loadText').textContent = 'Meminta izin kamera...';
 
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showError('🚫 Browser Tidak Support', 'Browser ini tidak mendukung akses kamera. Gunakan Chrome terbaru.');
+    return;
+  }
+
+  // Minta resolusi tinggi untuk barcode kecil
   navigator.mediaDevices.getUserMedia({
     video: {
       facingMode: { ideal: 'environment' },
@@ -230,278 +233,159 @@ function startNative() {
     audio: false
   })
   .then(function(s) {
-    stream = s;
-    video.srcObject = s;
-    video.style.display = 'block';
-    hideLoad();
-
-    video.onloadedmetadata = function() {
-      video.play();
-      setStatus('📷 Arahkan ke barcode / QR code...', '');
-
-      // Auto focus
-      try {
-        var track = s.getVideoTracks()[0];
-        var cap = track.getCapabilities();
-        if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) {
-          track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-        }
-      } catch (e) {}
-
-      nativeScan();
-    };
+    camStream = s;
+    onCamReady(callback);
   })
   .catch(function(err) {
-    // Fallback front camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
-    .then(function(s) {
-      stream = s;
-      video.srcObject = s;
-      video.style.display = 'block';
-      hideLoad();
-      video.onloadedmetadata = function() {
-        video.play();
-        setStatus('📷 Arahkan ke barcode/QR...', '');
-        nativeScan();
-      };
+    // Fallback: kamera depan / setting minimal
+    navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
     })
-    .catch(function() {
-      showCamError(err);
+    .then(function(s) {
+      camStream = s;
+      onCamReady(callback);
+    })
+    .catch(function(err2) {
+      handleCamError(err);
     });
   });
 }
 
-function nativeScan() {
+function onCamReady(callback) {
+  video.srcObject = camStream;
+  video.style.display = 'block';
+  document.getElementById('loadMsg').style.display = 'none';
+  document.getElementById('scanOverlay').style.display = 'block';
+
+  // Apply continuous autofocus jika tersedia
+  try {
+    var track = camStream.getVideoTracks()[0];
+    if (track) {
+      var cap = track.getCapabilities();
+      if (cap && cap.focusMode) {
+        var modes = cap.focusMode;
+        if (modes.indexOf('continuous') >= 0) {
+          track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+        }
+      }
+    }
+  } catch (e) {}
+
+  video.onloadedmetadata = function() {
+    video.play();
+    callback();
+  };
+}
+
+function handleCamError(err) {
+  var msg = err.toString();
+  if (msg.indexOf('NotAllowed') >= 0 || msg.indexOf('Permission') >= 0) {
+    showError('🚫 Izin Kamera Ditolak', 'Klik ikon 🔒 di address bar → Camera → Allow → lalu klik Coba Lagi.');
+  } else if (msg.indexOf('NotFound') >= 0) {
+    showError('📷 Kamera Tidak Ditemukan', 'Perangkat ini tidak memiliki kamera atau webcam.');
+  } else if (msg.indexOf('NotReadable') >= 0) {
+    showError('⚠️ Kamera Sedang Dipakai', 'Tutup aplikasi atau tab lain yang menggunakan kamera, lalu Coba Lagi.');
+  } else {
+    showError('❌ Kamera Error', msg);
+  }
+}
+
+function showError(title, desc) {
+  document.getElementById('loadMsg').style.display = 'none';
+  document.getElementById('errT').textContent = title;
+  document.getElementById('errD').textContent = desc;
+  document.getElementById('errbox').classList.add('show');
+  document.getElementById('scanOverlay').style.display = 'none';
+  setStatus('❌ Error', 'err');
+}
+
+// ====================================================
+// STEP 3: START BARCODE SCANNING
+// ====================================================
+function startScanning() {
   scanning = true;
   lastResult = '';
+  setStatus('📷 Arahkan ke barcode / QR code...', '');
+  document.getElementById('scanOverlay').style.display = 'block';
+  document.getElementById('tips').style.display = 'block';
 
   var formats;
   if (scanType === 'qrcode') {
     formats = ['qr_code'];
   } else {
-    formats = ['qr_code', 'code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar'];
+    formats = [
+      'qr_code', 'code_128', 'code_39', 'code_93',
+      'ean_13', 'ean_8', 'upc_a', 'upc_e',
+      'itf', 'codabar'
+    ];
   }
 
+  var detector;
   try {
     detector = new BarcodeDetector({ formats: formats });
   } catch (e) {
-    detector = new BarcodeDetector();
-  }
-
-  function loop() {
-    if (!scanning) return;
-    if (video.readyState < 2) {
-      animId = requestAnimationFrame(loop);
+    try {
+      detector = new BarcodeDetector();
+    } catch (e2) {
+      setStatus('❌ BarcodeDetector tidak tersedia', 'err');
       return;
     }
+  }
+
+  function scanLoop() {
+    if (!scanning) return;
+
+    // Pastikan video siap
+    if (video.readyState < 2) {
+      frameId = requestAnimationFrame(scanLoop);
+      return;
+    }
+
     detector.detect(video)
       .then(function(codes) {
-        if (codes.length > 0 && codes[0].rawValue && codes[0].rawValue !== lastResult) {
-          lastResult = codes[0].rawValue;
-          onFound(codes[0].rawValue, codes[0].format);
-          return;
+        if (!scanning) return;
+
+        if (codes.length > 0) {
+          var code = codes[0];
+          if (code.rawValue && code.rawValue !== lastResult) {
+            lastResult = code.rawValue;
+            onFound(code.rawValue, code.format);
+            return;
+          }
         }
-        animId = requestAnimationFrame(loop);
+
+        frameId = requestAnimationFrame(scanLoop);
       })
-      .catch(function() {
-        animId = requestAnimationFrame(loop);
+      .catch(function(err) {
+        if (!scanning) return;
+        frameId = requestAnimationFrame(scanLoop);
       });
   }
-  loop();
+
+  scanLoop();
 }
 
 // ====================================================
-// MODE 2: html5-qrcode Library (PC)
-// ====================================================
-function startLibrary() {
-  setLoad('Memuat library scanner...');
-
-  if (libLoaded) {
-    initLibScanner();
-    return;
-  }
-
-  // Load library dinamis
-  var script = document.createElement('script');
-  script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-  script.onload = function() {
-    libLoaded = true;
-    initLibScanner();
-  };
-  script.onerror = function() {
-    // Coba CDN alternatif
-    var script2 = document.createElement('script');
-    script2.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    script2.onload = function() {
-      libLoaded = true;
-      initLibScanner();
-    };
-    script2.onerror = function() {
-      hideLoad();
-      showCamError({ toString: function() { return 'Gagal memuat library scanner. Periksa koneksi internet.'; } });
-    };
-    document.head.appendChild(script2);
-  };
-  document.head.appendChild(script);
-}
-
-function initLibScanner() {
-  setLoad('Meminta izin kamera...');
-
-  // Hide native video, show lib container
-  video.style.display = 'none';
-  var libEl = document.getElementById('libReader');
-  libEl.style.display = 'block';
-  libEl.innerHTML = '';
-
-  // Cleanup previous
-  if (libScanner) {
-    try {
-      libScanner.stop().then(function() {
-        try { libScanner.clear(); } catch(e) {}
-        doLibStart();
-      }).catch(function() {
-        try { libScanner.clear(); } catch(e) {}
-        doLibStart();
-      });
-    } catch (e) {
-      doLibStart();
-    }
-  } else {
-    doLibStart();
-  }
-}
-
-function doLibStart() {
-  libScanner = new Html5Qrcode('libReader');
-
-  var fmts = getLibFormats();
-
-  var config = {
-    fps: 15,
-    qrbox: function(vw, vh) {
-      var m = Math.min(vw, vh);
-      var s = Math.floor(m * 0.75);
-      s = Math.max(120, Math.min(s, 350));
-      if (scanType === 'barcode') {
-        return { width: s, height: Math.max(80, Math.floor(s * 0.4)) };
-      }
-      return { width: s, height: Math.max(100, Math.floor(s * 0.85)) };
-    },
-    formatsToSupport: fmts,
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-  };
-
-  libScanner.start(
-    { facingMode: 'environment' },
-    config,
-    onLibScan,
-    function() {}
-  ).then(function() {
-    hideLoad();
-    setStatus('📷 Arahkan ke barcode / QR code...', '');
-    scanning = true;
-  }).catch(function(err) {
-    // Try front camera
-    libScanner.start(
-      { facingMode: 'user' },
-      config,
-      onLibScan,
-      function() {}
-    ).then(function() {
-      hideLoad();
-      setStatus('📷 Arahkan ke barcode/QR...', '');
-      scanning = true;
-    }).catch(function(err2) {
-      hideLoad();
-      showCamError(err);
-    });
-  });
-}
-
-function getLibFormats() {
-  if (typeof Html5QrcodeSupportedFormats === 'undefined') return undefined;
-  if (scanType === 'qrcode') return [Html5QrcodeSupportedFormats.QR_CODE];
-  return [
-    Html5QrcodeSupportedFormats.QR_CODE,
-    Html5QrcodeSupportedFormats.CODE_128,
-    Html5QrcodeSupportedFormats.CODE_39,
-    Html5QrcodeSupportedFormats.CODE_93,
-    Html5QrcodeSupportedFormats.EAN_13,
-    Html5QrcodeSupportedFormats.EAN_8,
-    Html5QrcodeSupportedFormats.UPC_A,
-    Html5QrcodeSupportedFormats.UPC_E,
-    Html5QrcodeSupportedFormats.ITF,
-    Html5QrcodeSupportedFormats.CODABAR
-  ];
-}
-
-function onLibScan(text, result) {
-  if (!scanning) return;
-  if (text === lastResult) return;
-  lastResult = text;
-  scanning = false;
-
-  try { libScanner.pause(true); } catch (e) {}
-
-  var fmt = 'Barcode';
-  try { fmt = result.result.format.formatName; } catch (e) {}
-  var typeLabel = (fmt === 'QR_CODE') ? 'QR Code' : 'Barcode (' + fmt + ')';
-
-  onFound(text, typeLabel);
-}
-
-// ====================================================
-// CAMERA ERROR
-// ====================================================
-function showCamError(err) {
-  hideLoad();
-  var msg = err.toString();
-  var title = '❌ Kamera Error';
-  var desc = 'Tidak bisa mengakses kamera.';
-
-  if (msg.indexOf('NotAllowed') >= 0 || msg.indexOf('Permission') >= 0) {
-    title = '🚫 Izin Ditolak';
-    desc = 'Klik ikon 🔒 di address bar → Camera → Allow → Coba Lagi';
-  } else if (msg.indexOf('NotFound') >= 0) {
-    title = '📷 Tidak Ada Kamera';
-    desc = 'Perangkat tidak memiliki kamera atau webcam.';
-  } else if (msg.indexOf('NotReadable') >= 0) {
-    title = '⚠️ Kamera Sibuk';
-    desc = 'Tutup aplikasi/tab lain yang menggunakan kamera.';
-  } else if (msg.indexOf('Gagal memuat') >= 0) {
-    title = '📦 Library Error';
-    desc = msg;
-  }
-
-  document.getElementById('errT').textContent = title;
-  document.getElementById('errD').textContent = desc;
-  document.getElementById('errbox').classList.add('show');
-  setStatus('❌ Kamera tidak tersedia', 'err');
-}
-
-// ====================================================
-// ON BARCODE FOUND (both modes)
+// ON BARCODE FOUND
 // ====================================================
 function onFound(value, format) {
   scanning = false;
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  if (frameId) {
+    cancelAnimationFrame(frameId);
+    frameId = null;
+  }
 
   beep();
   try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch (e) {}
 
-  // Format label
   var typeLabel;
-  if (typeof format === 'string') {
-    if (format === 'qr_code' || format === 'QR_CODE') {
-      typeLabel = 'QR Code';
-    } else if (format.indexOf('Barcode') >= 0 || format.indexOf('QR') >= 0) {
-      typeLabel = format; // already formatted from library
-    } else {
-      typeLabel = 'Barcode (' + format + ')';
-    }
+  if (format === 'qr_code') {
+    typeLabel = 'QR Code';
   } else {
-    typeLabel = 'Barcode';
+    typeLabel = 'Barcode (' + format + ')';
   }
 
   document.getElementById('resVal').textContent = value;
@@ -509,6 +393,7 @@ function onFound(value, format) {
   document.getElementById('resBox').classList.add('show');
   document.getElementById('btns').style.display = 'flex';
   document.getElementById('tips').style.display = 'none';
+  document.getElementById('scanOverlay').style.display = 'none';
   setStatus('✅ Berhasil scan!', 'ok');
 }
 
@@ -540,9 +425,11 @@ function doSend() {
     navigator.clipboard.writeText(value).then(function() {
       showToast('📋 Disalin! Paste di form.');
       setTimeout(function() { try { window.close(); } catch(e) {} }, 1500);
-    }).catch(function() { prompt('Salin kode:', value); });
+    }).catch(function() {
+      prompt('Salin kode ini:', value);
+    });
   } else {
-    prompt('Salin kode:', value);
+    prompt('Salin kode ini:', value);
   }
 }
 
@@ -550,32 +437,22 @@ function doRescan() {
   lastResult = '';
   document.getElementById('resBox').classList.remove('show');
   document.getElementById('btns').style.display = 'none';
-  document.getElementById('tips').style.display = 'block';
-  setStatus('📷 Arahkan ke barcode/QR...', '');
-
-  if (scanMode === 'native') {
-    nativeScan();
-  } else if (scanMode === 'library') {
-    scanning = true;
-    try { libScanner.resume(); } catch (e) { initLibScanner(); }
-  }
+  startScanning();
 }
 
 function stopAll() {
   scanning = false;
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
-
-  // Stop native stream
-  if (stream) {
-    try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {}
-    stream = null;
+  if (frameId) {
+    cancelAnimationFrame(frameId);
+    frameId = null;
+  }
+  if (camStream) {
+    try {
+      camStream.getTracks().forEach(function(t) { t.stop(); });
+    } catch (e) {}
+    camStream = null;
   }
   video.srcObject = null;
-
-  // Stop library scanner
-  if (libScanner) {
-    try { libScanner.stop().then(function() { libScanner.clear(); }).catch(function() {}); } catch (e) {}
-  }
 }
 
 function doClose() {
@@ -585,10 +462,29 @@ function doClose() {
 }
 
 // ====================================================
+// MAIN: Start Everything
+// ====================================================
+function startAll() {
+  document.getElementById('errbox').classList.remove('show');
+  document.getElementById('loadMsg').style.display = 'flex';
+  document.getElementById('resBox').classList.remove('show');
+  document.getElementById('btns').style.display = 'none';
+
+  // Step 1: Load polyfill
+  loadPolyfill(function() {
+    // Step 2: Start camera
+    startCamera(function() {
+      // Step 3: Start scanning
+      startScanning();
+    });
+  });
+}
+
+// ====================================================
 // INIT
 // ====================================================
 window.addEventListener('load', function() {
-  init();
+  startAll();
 });
 
 window.addEventListener('beforeunload', function() {
