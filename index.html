@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Scanner</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" onerror="libFail=true"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif}
@@ -17,7 +18,15 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .xbtn{background:#ef4444;border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .xbtn:active{transform:scale(.9)}
 .cam{flex:1;position:relative;background:#000;overflow:hidden}
-.cam video{width:100%;height:100%;object-fit:cover}
+#reader{width:100%!important;height:100%!important;border:none!important}
+#reader video{width:100%!important;height:100%!important;object-fit:cover!important}
+#reader img[alt="Info icon"],#reader__header_message,#reader__status_span{display:none!important}
+#reader__dashboard{position:absolute!important;bottom:0!important;left:0!important;right:0!important;background:rgba(0,0,0,.7)!important;padding:6px!important;z-index:5;max-height:50px;overflow:hidden}
+#reader__dashboard button{background:#10b981!important;color:#fff!important;border:none!important;padding:5px 10px!important;border-radius:6px!important;font-weight:600!important;font-size:.72rem!important}
+#reader__dashboard select{background:#333!important;color:#fff!important;border:1px solid #555!important;padding:3px 6px!important;border-radius:4px!important;font-size:.72rem!important}
+#reader__dashboard span,#reader__dashboard a{color:#ccc!important;font-size:.68rem!important}
+#reader__scan_region{min-height:80px!important;overflow:hidden!important}
+#reader__scan_region img{display:none!important}
 .panel{padding:12px 14px;background:#1e293b;flex-shrink:0}
 .status{text-align:center;font-size:.85rem;color:#94a3b8;margin-bottom:8px}
 .status.ok{color:#10b981;font-weight:600}
@@ -43,16 +52,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
 .spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.mbadge{position:absolute;top:8px;left:8px;z-index:6;font-size:.65rem;padding:4px 10px;border-radius:16px;font-weight:600;background:rgba(0,0,0,.6);color:#94a3b8;backdrop-filter:blur(4px)}
-.scan-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:3}
-.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(75vw,280px);height:min(50vw,180px);border:2px solid rgba(255,255,255,.25);border-radius:12px}
-.scan-frame .c{position:absolute;width:min(7vw,24px);height:min(7vw,24px);border:3px solid #10b981}
-.scan-frame .c.tl{top:-1px;left:-1px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
-.scan-frame .c.tr{top:-1px;right:-1px;border-left:none;border-bottom:none;border-radius:0 8px 0 0}
-.scan-frame .c.bl{bottom:-1px;left:-1px;border-right:none;border-top:none;border-radius:0 0 0 8px}
-.scan-frame .c.br{bottom:-1px;right:-1px;border-left:none;border-top:none;border-radius:0 0 8px 0}
-.scan-line{position:absolute;left:10%;width:80%;height:2px;background:linear-gradient(90deg,transparent,#10b981,transparent);animation:scanmove 2s ease-in-out infinite;z-index:4;pointer-events:none}
-@keyframes scanmove{0%{top:20%}50%{top:75%}100%{top:20%}}
 </style>
 </head>
 <body>
@@ -62,35 +61,24 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     <button class="xbtn" onclick="doClose()">✕</button>
   </div>
 
-  <div class="cam" id="camArea">
-    <video id="vid" autoplay muted playsinline style="display:none"></video>
-    <div class="mbadge" id="modeBadge">Memuat...</div>
-
-    <div class="scan-overlay" id="scanOverlay">
-      <div class="scan-frame">
-        <div class="c tl"></div><div class="c tr"></div>
-        <div class="c bl"></div><div class="c br"></div>
-      </div>
-      <div class="scan-line"></div>
-    </div>
-
+  <div class="cam">
+    <div id="reader"></div>
     <div class="errbox" id="errbox">
       <div class="icon">📷</div>
-      <div class="title" id="errT">Kamera Error</div>
-      <div class="desc" id="errD">Tidak bisa akses kamera</div>
-      <button class="btn btn-ok" onclick="startAll()" style="max-width:200px;margin-bottom:8px">🔄 Coba Lagi</button>
-      <button class="btn btn-no" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
+      <div class="title" id="errT">Error</div>
+      <div class="desc" id="errD">-</div>
+      <button class="btn btn-ok" onclick="startScan()" style="max-width:220px;margin-bottom:8px">🔄 Coba Lagi</button>
+      <button class="btn btn-no" onclick="doClose()" style="max-width:220px">✕ Tutup</button>
     </div>
-
     <div class="loading" id="loadMsg">
       <div class="spinner"></div>
-      <div id="loadText">Memuat scanner...</div>
+      <div id="loadText">Memulai scanner...</div>
     </div>
   </div>
 
   <div class="panel">
     <div class="status" id="status">Memulai...</div>
-    <div class="tips" id="tips">💡 Dekatkan & pastikan barcode terlihat jelas di dalam kotak.</div>
+    <div class="tips" id="tips">💡 Dekatkan kamera ke barcode. Pastikan terlihat jelas.</div>
     <div class="result" id="resBox">
       <div class="typ" id="resTyp">-</div>
       <div class="val" id="resVal">-</div>
@@ -106,300 +94,191 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 <div class="toast" id="toast"></div>
 
 <script>
-// ====================================================
-// CONFIG
-// ====================================================
+var libFail = false;
 var params = new URLSearchParams(location.search);
 var scanTarget = params.get('target') || 'pesanan';
 var scanType = params.get('type') || 'barcode';
 
+// Badge
 var bdg = document.getElementById('badge');
-if (scanTarget === 'resi') {
-  bdg.textContent = '🚚 Resi';
-  bdg.className = 'badge br';
-} else if (scanTarget === 'search') {
-  bdg.textContent = '🔍 Cari';
-  bdg.className = 'badge bs';
-} else {
-  bdg.textContent = '📋 Pesanan';
-  bdg.className = 'badge bp';
-}
+if (scanTarget === 'resi') { bdg.textContent = '🚚 Resi'; bdg.className = 'badge br'; }
+else if (scanTarget === 'search') { bdg.textContent = '🔍 Cari'; bdg.className = 'badge bs'; }
+else { bdg.textContent = '📋 Pesanan'; bdg.className = 'badge bp'; }
 
-// ====================================================
-// VARIABLES
-// ====================================================
-var video = document.getElementById('vid');
-var camStream = null;
-var scanning = false;
-var lastResult = '';
-var frameId = null;
+var scanner = null;
+var lastVal = '';
+var paused = false;
 var audioCtx = null;
-var barcodeDetectorReady = false;
 
-// ====================================================
-// AUDIO
-// ====================================================
 function beep() {
   try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    function tone(freq, delay, dur) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function t(f, dl, d) {
       var o = audioCtx.createOscillator();
       var g = audioCtx.createGain();
-      o.connect(g);
-      g.connect(audioCtx.destination);
-      o.frequency.value = freq;
-      var t = audioCtx.currentTime + delay;
-      g.gain.setValueAtTime(0.3, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.start(t);
-      o.stop(t + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.frequency.value = f;
+      var tm = audioCtx.currentTime + dl;
+      g.gain.setValueAtTime(0.3, tm);
+      g.gain.exponentialRampToValueAtTime(0.001, tm + d);
+      o.start(tm); o.stop(tm + d);
     }
-    tone(1200, 0, 0.15);
-    tone(1600, 0.18, 0.2);
+    t(1200, 0, 0.15);
+    t(1600, 0.18, 0.2);
   } catch (e) {}
 }
 
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 3000);
+function showToast(m) {
+  var el = document.getElementById('toast');
+  el.textContent = m;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3000);
 }
 
-function setStatus(msg, type) {
+function setStatus(m, c) {
   var el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = 'status' + (type ? ' ' + type : '');
+  el.textContent = m;
+  el.className = 'status' + (c ? ' ' + c : '');
 }
 
-// ====================================================
-// STEP 1: LOAD POLYFILL (agar BarcodeDetector ada di semua browser)
-// ====================================================
-function loadPolyfill(callback) {
-  // Jika sudah ada native BarcodeDetector → langsung pakai
-  if ('BarcodeDetector' in window) {
-    document.getElementById('modeBadge').textContent = '⚡ Native';
-    callback();
-    return;
-  }
-
-  // Load polyfill dari CDN
-  document.getElementById('loadText').textContent = 'Memuat barcode engine...';
-  document.getElementById('modeBadge').textContent = '📦 Loading...';
-
-  var script = document.createElement('script');
-  script.src = 'https://fastly.jsdelivr.net/npm/barcode-detector@2/dist/es/polyfill.min.js';
-  script.onload = function() {
-    document.getElementById('modeBadge').textContent = '📦 Polyfill';
-    callback();
-  };
-  script.onerror = function() {
-    // Coba CDN alternatif
-    var script2 = document.createElement('script');
-    script2.src = 'https://unpkg.com/barcode-detector@2/dist/es/polyfill.min.js';
-    script2.onload = function() {
-      document.getElementById('modeBadge').textContent = '📦 Polyfill';
-      callback();
-    };
-    script2.onerror = function() {
-      document.getElementById('modeBadge').textContent = '❌ Gagal';
-      showError('📦 Gagal Memuat Engine', 'Library barcode scanner gagal dimuat. Periksa koneksi internet lalu coba lagi.');
-    };
-    document.head.appendChild(script2);
-  };
-  document.head.appendChild(script);
+function getFmts() {
+  if (typeof Html5QrcodeSupportedFormats === 'undefined') return undefined;
+  if (scanType === 'qrcode') return [Html5QrcodeSupportedFormats.QR_CODE];
+  return [
+    Html5QrcodeSupportedFormats.QR_CODE,
+    Html5QrcodeSupportedFormats.CODE_128,
+    Html5QrcodeSupportedFormats.CODE_39,
+    Html5QrcodeSupportedFormats.CODE_93,
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.ITF,
+    Html5QrcodeSupportedFormats.CODABAR
+  ];
 }
 
-// ====================================================
-// STEP 2: START CAMERA
-// ====================================================
-function startCamera(callback) {
+function startScan() {
+  document.getElementById('errbox').classList.remove('show');
+  document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('loadText').textContent = 'Meminta izin kamera...';
+  document.getElementById('resBox').classList.remove('show');
+  document.getElementById('btns').style.display = 'none';
+  document.getElementById('tips').style.display = 'block';
+  paused = false;
+  lastVal = '';
 
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showError('🚫 Browser Tidak Support', 'Browser ini tidak mendukung akses kamera. Gunakan Chrome terbaru.');
+  // Check library
+  if (typeof Html5Qrcode === 'undefined') {
+    document.getElementById('loadMsg').style.display = 'none';
+    document.getElementById('errT').textContent = '📦 Library Gagal Dimuat';
+    document.getElementById('errD').textContent = 'Library scanner tidak bisa dimuat. Periksa koneksi internet lalu klik Coba Lagi.';
+    document.getElementById('errbox').classList.add('show');
+    setStatus('❌ Library error', 'err');
     return;
   }
 
-  // Minta resolusi tinggi untuk barcode kecil
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: { ideal: 'environment' },
-      width: { min: 640, ideal: 1920 },
-      height: { min: 480, ideal: 1080 }
+  // Cleanup
+  if (scanner) {
+    try {
+      scanner.stop().then(function() {
+        try { scanner.clear(); } catch(e) {}
+        doStart();
+      }).catch(function() {
+        try { scanner.clear(); } catch(e) {}
+        doStart();
+      });
+    } catch (e) {
+      doStart();
+    }
+  } else {
+    doStart();
+  }
+}
+
+function doStart() {
+  document.getElementById('reader').innerHTML = '';
+  scanner = new Html5Qrcode('reader');
+
+  var config = {
+    fps: 15,
+    qrbox: function(vw, vh) {
+      var m = Math.min(vw, vh);
+      var s = Math.floor(m * 0.75);
+      s = Math.max(120, Math.min(s, 350));
+      if (scanType === 'barcode') {
+        return { width: s, height: Math.max(80, Math.floor(s * 0.4)) };
+      }
+      return { width: s, height: Math.max(100, Math.floor(s * 0.85)) };
     },
-    audio: false
-  })
-  .then(function(s) {
-    camStream = s;
-    onCamReady(callback);
-  })
-  .catch(function(err) {
-    // Fallback: kamera depan / setting minimal
-    navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false
-    })
-    .then(function(s) {
-      camStream = s;
-      onCamReady(callback);
-    })
-    .catch(function(err2) {
-      handleCamError(err);
+    formatsToSupport: getFmts(),
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+  };
+
+  scanner.start(
+    { facingMode: 'environment' },
+    config,
+    onScanOK,
+    function() {}
+  ).then(function() {
+    document.getElementById('loadMsg').style.display = 'none';
+    setStatus('📷 Arahkan ke barcode / QR code...', '');
+  }).catch(function(err) {
+    // Try user camera
+    scanner.start(
+      { facingMode: 'user' },
+      config,
+      onScanOK,
+      function() {}
+    ).then(function() {
+      document.getElementById('loadMsg').style.display = 'none';
+      setStatus('📷 Arahkan ke barcode/QR...', '');
+    }).catch(function(err2) {
+      document.getElementById('loadMsg').style.display = 'none';
+      var msg = err.toString();
+      var title = '❌ Kamera Error';
+      var desc = msg;
+      if (msg.indexOf('NotAllowed') >= 0) {
+        title = '🚫 Izin Ditolak';
+        desc = 'Klik 🔒 di address bar → Camera → Allow → Coba Lagi';
+      } else if (msg.indexOf('NotFound') >= 0) {
+        title = '📷 Kamera Tidak Ada';
+        desc = 'Perangkat tidak punya kamera/webcam.';
+      } else if (msg.indexOf('NotReadable') >= 0) {
+        title = '⚠️ Kamera Sibuk';
+        desc = 'Tutup app/tab lain yang pakai kamera.';
+      }
+      document.getElementById('errT').textContent = title;
+      document.getElementById('errD').textContent = desc;
+      document.getElementById('errbox').classList.add('show');
+      setStatus('❌ Error', 'err');
     });
   });
 }
 
-function onCamReady(callback) {
-  video.srcObject = camStream;
-  video.style.display = 'block';
-  document.getElementById('loadMsg').style.display = 'none';
-  document.getElementById('scanOverlay').style.display = 'block';
-
-  // Apply continuous autofocus jika tersedia
-  try {
-    var track = camStream.getVideoTracks()[0];
-    if (track) {
-      var cap = track.getCapabilities();
-      if (cap && cap.focusMode) {
-        var modes = cap.focusMode;
-        if (modes.indexOf('continuous') >= 0) {
-          track.applyConstraints({
-            advanced: [{ focusMode: 'continuous' }]
-          });
-        }
-      }
-    }
-  } catch (e) {}
-
-  video.onloadedmetadata = function() {
-    video.play();
-    callback();
-  };
-}
-
-function handleCamError(err) {
-  var msg = err.toString();
-  if (msg.indexOf('NotAllowed') >= 0 || msg.indexOf('Permission') >= 0) {
-    showError('🚫 Izin Kamera Ditolak', 'Klik ikon 🔒 di address bar → Camera → Allow → lalu klik Coba Lagi.');
-  } else if (msg.indexOf('NotFound') >= 0) {
-    showError('📷 Kamera Tidak Ditemukan', 'Perangkat ini tidak memiliki kamera atau webcam.');
-  } else if (msg.indexOf('NotReadable') >= 0) {
-    showError('⚠️ Kamera Sedang Dipakai', 'Tutup aplikasi atau tab lain yang menggunakan kamera, lalu Coba Lagi.');
-  } else {
-    showError('❌ Kamera Error', msg);
-  }
-}
-
-function showError(title, desc) {
-  document.getElementById('loadMsg').style.display = 'none';
-  document.getElementById('errT').textContent = title;
-  document.getElementById('errD').textContent = desc;
-  document.getElementById('errbox').classList.add('show');
-  document.getElementById('scanOverlay').style.display = 'none';
-  setStatus('❌ Error', 'err');
-}
-
-// ====================================================
-// STEP 3: START BARCODE SCANNING
-// ====================================================
-function startScanning() {
-  scanning = true;
-  lastResult = '';
-  setStatus('📷 Arahkan ke barcode / QR code...', '');
-  document.getElementById('scanOverlay').style.display = 'block';
-  document.getElementById('tips').style.display = 'block';
-
-  var formats;
-  if (scanType === 'qrcode') {
-    formats = ['qr_code'];
-  } else {
-    formats = [
-      'qr_code', 'code_128', 'code_39', 'code_93',
-      'ean_13', 'ean_8', 'upc_a', 'upc_e',
-      'itf', 'codabar'
-    ];
-  }
-
-  var detector;
-  try {
-    detector = new BarcodeDetector({ formats: formats });
-  } catch (e) {
-    try {
-      detector = new BarcodeDetector();
-    } catch (e2) {
-      setStatus('❌ BarcodeDetector tidak tersedia', 'err');
-      return;
-    }
-  }
-
-  function scanLoop() {
-    if (!scanning) return;
-
-    // Pastikan video siap
-    if (video.readyState < 2) {
-      frameId = requestAnimationFrame(scanLoop);
-      return;
-    }
-
-    detector.detect(video)
-      .then(function(codes) {
-        if (!scanning) return;
-
-        if (codes.length > 0) {
-          var code = codes[0];
-          if (code.rawValue && code.rawValue !== lastResult) {
-            lastResult = code.rawValue;
-            onFound(code.rawValue, code.format);
-            return;
-          }
-        }
-
-        frameId = requestAnimationFrame(scanLoop);
-      })
-      .catch(function(err) {
-        if (!scanning) return;
-        frameId = requestAnimationFrame(scanLoop);
-      });
-  }
-
-  scanLoop();
-}
-
-// ====================================================
-// ON BARCODE FOUND
-// ====================================================
-function onFound(value, format) {
-  scanning = false;
-  if (frameId) {
-    cancelAnimationFrame(frameId);
-    frameId = null;
-  }
+function onScanOK(text, result) {
+  if (paused) return;
+  if (text === lastVal) return;
+  lastVal = text;
+  paused = true;
 
   beep();
   try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch (e) {}
 
-  var typeLabel;
-  if (format === 'qr_code') {
-    typeLabel = 'QR Code';
-  } else {
-    typeLabel = 'Barcode (' + format + ')';
-  }
+  try { scanner.pause(true); } catch (e) {}
 
-  document.getElementById('resVal').textContent = value;
+  var fmt = 'Barcode';
+  try { fmt = result.result.format.formatName; } catch (e) {}
+  var typeLabel = (fmt === 'QR_CODE') ? 'QR Code' : 'Barcode (' + fmt + ')';
+
+  document.getElementById('resVal').textContent = text;
   document.getElementById('resTyp').textContent = typeLabel;
   document.getElementById('resBox').classList.add('show');
   document.getElementById('btns').style.display = 'flex';
   document.getElementById('tips').style.display = 'none';
-  document.getElementById('scanOverlay').style.display = 'none';
-  setStatus('✅ Berhasil scan!', 'ok');
+  setStatus('✅ Berhasil!', 'ok');
 }
 
-// ====================================================
-// ACTIONS
-// ====================================================
 function doSend() {
   var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resTyp').textContent;
@@ -420,39 +299,32 @@ function doSend() {
     } catch (e) {}
   }
 
-  // Fallback: copy
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(value).then(function() {
       showToast('📋 Disalin! Paste di form.');
       setTimeout(function() { try { window.close(); } catch(e) {} }, 1500);
-    }).catch(function() {
-      prompt('Salin kode ini:', value);
-    });
+    }).catch(function() { prompt('Salin:', value); });
   } else {
-    prompt('Salin kode ini:', value);
+    prompt('Salin:', value);
   }
 }
 
 function doRescan() {
-  lastResult = '';
+  lastVal = '';
+  paused = false;
   document.getElementById('resBox').classList.remove('show');
   document.getElementById('btns').style.display = 'none';
-  startScanning();
+  document.getElementById('tips').style.display = 'block';
+  setStatus('📷 Arahkan ke barcode/QR...', '');
+  try { scanner.resume(); } catch (e) { startScan(); }
 }
 
 function stopAll() {
-  scanning = false;
-  if (frameId) {
-    cancelAnimationFrame(frameId);
-    frameId = null;
+  paused = true;
+  if (scanner) {
+    try { scanner.stop().then(function() { try{scanner.clear();}catch(e){} }).catch(function() {}); }
+    catch (e) {}
   }
-  if (camStream) {
-    try {
-      camStream.getTracks().forEach(function(t) { t.stop(); });
-    } catch (e) {}
-    camStream = null;
-  }
-  video.srcObject = null;
 }
 
 function doClose() {
@@ -461,35 +333,10 @@ function doClose() {
   setTimeout(function() { window.history.back(); }, 300);
 }
 
-// ====================================================
-// MAIN: Start Everything
-// ====================================================
-function startAll() {
-  document.getElementById('errbox').classList.remove('show');
-  document.getElementById('loadMsg').style.display = 'flex';
-  document.getElementById('resBox').classList.remove('show');
-  document.getElementById('btns').style.display = 'none';
-
-  // Step 1: Load polyfill
-  loadPolyfill(function() {
-    // Step 2: Start camera
-    startCamera(function() {
-      // Step 3: Start scanning
-      startScanning();
-    });
-  });
-}
-
-// ====================================================
-// INIT
-// ====================================================
 window.addEventListener('load', function() {
-  startAll();
+  setTimeout(function() { startScan(); }, 500);
 });
-
-window.addEventListener('beforeunload', function() {
-  stopAll();
-});
+window.addEventListener('beforeunload', function() { stopAll(); });
 </script>
 </body>
 </html>
