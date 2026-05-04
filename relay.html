@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Scan dari HP</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
@@ -67,7 +66,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     <h1>📱 Scan via HP <span class="badge" id="badge">-</span></h1>
     <button class="xbtn" onclick="doClose()">✕</button>
   </div>
-
   <div class="cam">
     <div id="reader"></div>
     <div class="sent" id="sentScreen">
@@ -86,7 +84,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     </div>
     <div class="loading" id="loadMsg"><div class="spinner"></div><div>Memulai scanner...</div></div>
   </div>
-
   <div class="panel">
     <div class="status" id="status">Memulai...</div>
     <div class="result" id="resBox">
@@ -102,22 +99,15 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 <div class="toast" id="toast"></div>
 
 <script>
-// ====================================================
-// FIREBASE CONFIG - GANTI DENGAN MILIK ANDA
-// ====================================================
-var firebaseConfig = {
-  apiKey: "GANTI_API_KEY",
-  authDomain: "GANTI_PROJECT.firebaseapp.com",
-  databaseURL: "https://GANTI_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "GANTI_PROJECT"
-};
-
-firebase.initializeApp(firebaseConfig);
+// Firebase Config
+firebase.initializeApp({
+  apiKey: "AIzaSyAJGVKRhmMYFGIy07Y5nwvOQlyDDDjN3Xg",
+  authDomain: "packing-scanner-31d3a.firebaseapp.com",
+  databaseURL: "https://packing-scanner-31d3a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "packing-scanner-31d3a"
+});
 var db = firebase.database();
 
-// ====================================================
-// PARAMS
-// ====================================================
 var params = new URLSearchParams(location.search);
 var scanTarget = params.get('target') || 'pesanan';
 var scanType = params.get('type') || 'barcode';
@@ -136,7 +126,7 @@ var audioCtx = null;
 function beep() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function t(f,dl,d) {
+    function t(f, dl, d) {
       var o = audioCtx.createOscillator();
       var g = audioCtx.createGain();
       o.connect(g); g.connect(audioCtx.destination);
@@ -269,24 +259,18 @@ function onOK(text, result) {
   setStatus('✅ Berhasil!', 'ok');
 }
 
-// ====================================================
-// KIRIM KE PC VIA FIREBASE (INSTAN!)
-// ====================================================
 function doSend() {
   var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resTyp').textContent;
 
   setStatus('⏳ Mengirim...', '');
 
-  // Write ke Firebase
   db.ref('scans/' + sessionId).set({
     target: scanTarget,
     value: value,
     type: type,
     time: Date.now()
   }).then(function() {
-    // Hapus setelah 30 detik (auto cleanup)
-    db.ref('scans/' + sessionId).onDisconnect().remove();
     setTimeout(function() {
       db.ref('scans/' + sessionId).remove();
     }, 30000);
@@ -298,7 +282,7 @@ function doSend() {
 
     try { scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); } catch (e) {}
   }).catch(function(err) {
-    setStatus('❌ Gagal kirim: ' + err.message, 'err');
+    setStatus('❌ Gagal: ' + err.message, 'err');
   });
 }
 
