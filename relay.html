@@ -246,17 +246,29 @@ function doSend() {
   var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resTyp').textContent;
 
-  // Simpan ke localStorage dengan session key
-  var data = JSON.stringify({
+  var data = {
     target: scanTarget,
     value: value,
     type: type,
-    time: Date.now()
-  });
+    time: Date.now(),
+    session: sessionId
+  };
 
+  var dataStr = JSON.stringify(data);
+
+  // Method 1: BroadcastChannel (INSTAN, same origin)
   try {
-    localStorage.setItem('scan_result_' + sessionId, data);
-  } catch(e) {}
+    var bc = new BroadcastChannel('packing_scan_channel');
+    bc.postMessage(data);
+    bc.close();
+  } catch (e) {}
+
+  // Method 2: localStorage (trigger storage event di tab lain)
+  try {
+    localStorage.setItem('scan_result_' + sessionId, dataStr);
+    // Trigger ulang supaya storage event pasti ke-fire
+    localStorage.setItem('scan_ping', Date.now().toString());
+  } catch (e) {}
 
   // Tampilkan layar sukses
   document.getElementById('sentVal').textContent = value + ' (' + type + ')';
@@ -264,7 +276,9 @@ function doSend() {
   setStatus('✅ Dikirim!', 'ok');
   showToast('✅ Kode dikirim ke PC!');
 
-  try { scanner.stop().then(function(){scanner.clear()}).catch(function(){}); } catch(e){}
+  try {
+    scanner.stop().then(function() { scanner.clear(); }).catch(function() {});
+  } catch (e) {}
 }
 
 function doRescan() {
