@@ -3,337 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>📷 Barcode Scanner</title>
+<title>Barcode Scanner</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-  :root {
-    --primary: #7c3aed;
-    --success: #10b981;
-    --danger: #ef4444;
-    --bg: #0f172a;
-    --card: #1e293b;
-    --text: #f1f5f9;
-    --text-dim: #94a3b8;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* HEADER */
-  .header {
-    padding: 14px 20px;
-    background: var(--card);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,.1);
-    flex-shrink: 0;
-  }
-  .header h1 { font-size: 1rem; display: flex; align-items: center; gap: 8px; }
-  .header .target-badge {
-    font-size: .7rem;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: 600;
-  }
-  .target-pesanan { background: rgba(124,58,237,.2); color: #a78bfa; }
-  .target-resi { background: rgba(16,185,129,.2); color: #6ee7b7; }
-  .target-search { background: rgba(59,130,246,.2); color: #93c5fd; }
-
-  .close-btn {
-    background: var(--danger);
-    border: none;
-    color: #fff;
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    font-size: 1.3rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .close-btn:active { transform: scale(.9); }
-
-  /* VIDEO AREA */
-  .video-area {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-  }
-  .video-area video {
-    width: 100%; height: 100%; object-fit: cover;
-  }
-
-  /* Scan guide overlay */
-  .scan-guide {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 260px; height: 180px;
-    border: 2px solid rgba(255,255,255,.3);
-    border-radius: 16px;
-    z-index: 5;
-    pointer-events: none;
-  }
-  .scan-guide .c {
-    position: absolute;
-    width: 28px; height: 28px;
-    border: 3px solid var(--success);
-  }
-  .scan-guide .c.tl { top:-1px;left:-1px;border-right:none;border-bottom:none;border-radius:10px 0 0 0; }
-  .scan-guide .c.tr { top:-1px;right:-1px;border-left:none;border-bottom:none;border-radius:0 10px 0 0; }
-  .scan-guide .c.bl { bottom:-1px;left:-1px;border-right:none;border-top:none;border-radius:0 0 0 10px; }
-  .scan-guide .c.br { bottom:-1px;right:-1px;border-left:none;border-top:none;border-radius:0 0 10px 0; }
-
-  .scan-line {
-    position: absolute;
-    left: 8%; width: 84%; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--success), transparent);
-    animation: scanAnim 2s ease-in-out infinite;
-    z-index: 6;
-    pointer-events: none;
-  }
-  @keyframes scanAnim { 0% { top: 15%; } 50% { top: 80%; } 100% { top: 15%; } }
-
-  /* Scan success flash */
-  .flash {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(16, 185, 129, .3);
-    z-index: 10;
-    display: none;
-    animation: flashAnim .3s;
-  }
-  .flash.show { display: block; }
-  @keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
-
-  /* BOTTOM PANEL */
-  .bottom-panel {
-    padding: 16px 20px;
-    background: var(--card);
-    border-top: 1px solid rgba(255,255,255,.1);
-    flex-shrink: 0;
-  }
-
-  .status-msg {
-    text-align: center;
-    font-size: .88rem;
-    color: var(--text-dim);
-    margin-bottom: 12px;
-  }
-  .status-msg.ok { color: var(--success); font-weight: 600; }
-  .status-msg.err { color: var(--danger); font-weight: 600; }
-
-  /* Result box */
-  .result-box {
-    background: rgba(16,185,129,.1);
-    border: 2px solid var(--success);
-    border-radius: 12px;
-    padding: 14px;
-    text-align: center;
-    margin-bottom: 12px;
-    display: none;
-  }
-  .result-box.show { display: block; }
-  .result-box .value {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--success);
-    word-break: break-all;
-    margin-bottom: 4px;
-  }
-  .result-box .type {
-    font-size: .72rem;
-    color: var(--text-dim);
-  }
-
-  .btn-row {
-    display: flex;
-    gap: 8px;
-  }
-  .btn {
-    flex: 1;
-    padding: 14px;
-    border: none;
-    border-radius: 10px;
-    font-size: .88rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-family: inherit;
-    transition: .2s;
-  }
-  .btn:active { transform: scale(.96); }
-  .btn-success { background: var(--success); color: #fff; }
-  .btn-warning { background: #f59e0b; color: #fff; }
-  .btn-danger { background: var(--danger); color: #fff; }
-  .btn-outline { background: transparent; border: 2px solid rgba(255,255,255,.2); color: var(--text); }
-
-  /* Camera switch */
-  .cam-switch {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    background: rgba(0,0,0,.6);
-    border: 1px solid rgba(255,255,255,.2);
-    color: #fff;
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    font-size: 1.3rem;
-    cursor: pointer;
-    z-index: 8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .cam-switch:active { background: rgba(0,0,0,.8); }
-
-  /* Error panel */
-  .error-panel {
-    display: none;
-    text-align: center;
-    padding: 40px 24px;
-    color: var(--text);
-  }
-  .error-panel.show { display: block; }
-  .error-panel .icon { font-size: 3.5rem; margin-bottom: 16px; }
-  .error-panel .title { font-size: 1.1rem; font-weight: 700; color: var(--danger); margin-bottom: 8px; }
-  .error-panel .desc { font-size: .85rem; color: var(--text-dim); margin-bottom: 20px; line-height: 1.7; }
-  .error-panel .steps {
-    text-align: left;
-    font-size: .82rem;
-    color: var(--text-dim);
-    line-height: 2;
-    margin-bottom: 20px;
-    padding-left: 24px;
-  }
-
-  /* Copied toast */
-  .toast {
-    position: fixed;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--success);
-    color: #fff;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: .88rem;
-    display: none;
-    z-index: 100;
-    box-shadow: 0 4px 20px rgba(0,0,0,.3);
-  }
-  .toast.show { display: block; animation: toastIn .3s; }
-  @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-
-  @media (max-width: 400px) {
-    .scan-guide { width: 200px; height: 140px; }
-  }
+:root{--success:#10b981;--danger:#ef4444;--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--dim:#94a3b8}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--card);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;z-index:10}
+.topbar h1{font-size:.95rem;display:flex;align-items:center;gap:8px}
+.badge{font-size:.68rem;padding:4px 12px;border-radius:20px;font-weight:600}
+.badge-pesanan{background:rgba(124,58,237,.2);color:#a78bfa}
+.badge-resi{background:rgba(16,185,129,.2);color:#6ee7b7}
+.badge-search{background:rgba(59,130,246,.2);color:#93c5fd}
+.close-x{background:var(--danger);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.close-x:active{transform:scale(.9)}
+.vid-area{flex:1;position:relative;overflow:hidden;background:#000;min-height:200px}
+#reader{width:100%!important;height:100%!important}
+#reader video{width:100%!important;height:100%!important;object-fit:cover!important}
+#reader img[alt="Info icon"]{display:none!important}
+#reader__dashboard_section{position:absolute!important;bottom:0;left:0;right:0;background:rgba(0,0,0,.7)!important;padding:8px!important;z-index:5}
+#reader__dashboard_section button{background:var(--success)!important;color:#fff!important;border:none!important;padding:8px 16px!important;border-radius:8px!important;font-weight:600!important;cursor:pointer!important}
+#reader__dashboard_section select{background:#333!important;color:#fff!important;border:1px solid #555!important;padding:6px 10px!important;border-radius:6px!important}
+#reader__dashboard_section span{color:#ccc!important;font-size:.8rem!important}
+#reader__scan_region{min-height:200px!important}
+#reader__scan_region img{display:none!important}
+.scan-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:4}
+.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:250px;height:170px;border:2px solid rgba(255,255,255,.3);border-radius:14px}
+.scan-frame .c{position:absolute;width:26px;height:26px;border:3px solid var(--success)}
+.scan-frame .c.tl{top:-1px;left:-1px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
+.scan-frame .c.tr{top:-1px;right:-1px;border-left:none;border-bottom:none;border-radius:0 8px 0 0}
+.scan-frame .c.bl{bottom:-1px;left:-1px;border-right:none;border-top:none;border-radius:0 0 0 8px}
+.scan-frame .c.br{bottom:-1px;right:-1px;border-left:none;border-top:none;border-radius:0 0 8px 0}
+.sweep{position:absolute;left:8%;width:84%;height:2px;background:linear-gradient(90deg,transparent,var(--success),transparent);animation:sweep 2s ease-in-out infinite}
+@keyframes sweep{0%{top:20%}50%{top:75%}100%{top:20%}}
+.flash{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(16,185,129,.25);display:none;z-index:8}
+.flash.show{display:block;animation:fl .3s}
+@keyframes fl{from{opacity:1}to{opacity:0}}
+.bot{padding:14px 20px;background:var(--card);border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;z-index:10}
+.msg{text-align:center;font-size:.85rem;color:var(--dim);margin-bottom:10px}
+.msg.ok{color:var(--success);font-weight:600}
+.msg.err{color:var(--danger);font-weight:600}
+.res-box{background:rgba(16,185,129,.1);border:2px solid var(--success);border-radius:12px;padding:14px;text-align:center;margin-bottom:10px;display:none}
+.res-box.show{display:block}
+.res-box .val{font-size:1.15rem;font-weight:700;color:var(--success);word-break:break-all;margin-bottom:4px}
+.res-box .typ{font-size:.72rem;color:var(--dim)}
+.btns{display:flex;gap:8px}
+.btn{flex:1;padding:14px;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit}
+.btn:active{transform:scale(.96)}
+.btn-ok{background:var(--success);color:#fff}
+.btn-warn{background:#f59e0b;color:#fff}
+.btn-no{background:var(--danger);color:#fff}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:12px 24px;border-radius:10px;font-weight:600;font-size:.88rem;display:none;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.toast.show{display:block;animation:tin .3s}
+@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.err-panel{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:20;padding:40px 24px;text-align:center;overflow-y:auto}
+.err-panel.show{display:block}
+.err-panel .icon{font-size:3.5rem;margin-bottom:16px}
+.err-panel .title{font-size:1.1rem;font-weight:700;color:var(--danger);margin-bottom:8px}
+.err-panel .desc{font-size:.85rem;color:var(--dim);margin-bottom:16px;line-height:1.7}
+.err-panel .steps{text-align:left;font-size:.82rem;color:var(--dim);line-height:2.2;margin-bottom:20px;padding-left:24px}
+@media(max-width:400px){.scan-frame{width:200px;height:130px}}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>
-    📷 Scanner
-    <span class="target-badge" id="targetBadge">No. Pesanan</span>
-  </h1>
-  <button class="close-btn" onclick="closePage()">✕</button>
+<div class="topbar">
+  <h1>📷 Scanner <span class="badge" id="badge">-</span></h1>
+  <button class="close-x" onclick="closePage()">✕</button>
 </div>
 
-<div class="video-area" id="videoArea">
-  <video id="video" autoplay muted playsinline></video>
-  <div class="scan-guide" id="scanGuide">
-    <div class="c tl"></div><div class="c tr"></div>
-    <div class="c bl"></div><div class="c br"></div>
+<div class="vid-area" id="vidArea">
+  <div id="reader"></div>
+  <div class="scan-overlay" id="overlay">
+    <div class="scan-frame"><div class="c tl"></div><div class="c tr"></div><div class="c bl"></div><div class="c br"></div></div>
+    <div class="sweep" id="sweep"></div>
   </div>
-  <div class="scan-line" id="scanLine"></div>
   <div class="flash" id="flash"></div>
-  <button class="cam-switch" id="camSwitch" onclick="switchCamera()">🔄</button>
-
-  <!-- Error Panel -->
-  <div class="error-panel" id="errorPanel">
+  <div class="err-panel" id="errPanel">
     <div class="icon">📷</div>
     <div class="title" id="errTitle">Izin Kamera Diperlukan</div>
-    <div class="desc" id="errDesc">Browser memerlukan izin untuk mengakses kamera.</div>
+    <div class="desc" id="errDesc">-</div>
     <div class="steps" id="errSteps"></div>
-    <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
-      <button class="btn btn-success" onclick="retryCamera()" style="max-width:250px;">🔄 Izinkan & Coba Lagi</button>
-      <button class="btn btn-outline" onclick="closePage()" style="max-width:250px;">✕ Kembali</button>
-    </div>
+    <button class="btn btn-ok" onclick="retry()" style="max-width:260px;margin:0 auto 10px">🔄 Coba Lagi</button>
+    <button class="btn btn-no" onclick="closePage()" style="max-width:260px;margin:0 auto">✕ Kembali</button>
   </div>
 </div>
 
-<div class="bottom-panel">
-  <div class="status-msg" id="statusMsg">Meminta izin kamera...</div>
-  <div class="result-box" id="resultBox">
-    <div class="type" id="resType">-</div>
-    <div class="value" id="resValue">-</div>
+<div class="bot">
+  <div class="msg" id="msg">Memulai scanner...</div>
+  <div class="res-box" id="resBox">
+    <div class="typ" id="resType">-</div>
+    <div class="val" id="resVal">-</div>
   </div>
-  <div class="btn-row" id="btnRow" style="display:none;">
-    <button class="btn btn-success" onclick="sendResult()">✅ Kirim</button>
-    <button class="btn btn-warning" onclick="rescan()">🔄 Ulang</button>
-    <button class="btn btn-danger" onclick="closePage()">✕</button>
+  <div class="btns" id="btns" style="display:none">
+    <button class="btn btn-ok" onclick="sendResult()">✅ Kirim</button>
+    <button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button>
+    <button class="btn btn-no" onclick="closePage()">✕</button>
   </div>
 </div>
 
-<div class="toast" id="toast">✅ Kode dikirim!</div>
-
-<canvas id="canvas" style="display:none;"></canvas>
+<div class="toast" id="toast"></div>
 
 <script>
-// ============================================
-// GET URL PARAMETERS
-// ============================================
-var params = new URLSearchParams(window.location.search);
-var scanTarget = params.get('target') || 'pesanan';  // pesanan, resi, search
-var scanType = params.get('type') || 'barcode';       // barcode, qrcode
-var callbackOrigin = params.get('origin') || '';       // origin of GAS page
-var gasWindowRef = null;
-
-// ============================================
-// UI SETUP
-// ============================================
-var badge = document.getElementById('targetBadge');
-if (scanTarget === 'pesanan') {
-  badge.textContent = '📋 No. Pesanan';
-  badge.className = 'target-badge target-pesanan';
-} else if (scanTarget === 'resi') {
-  badge.textContent = '🚚 No. Resi';
-  badge.className = 'target-badge target-resi';
-} else {
-  badge.textContent = '🔍 Pencarian';
-  badge.className = 'target-badge target-search';
-}
-
-// ============================================
-// CAMERA VARIABLES
-// ============================================
-var stream = null;
-var scanning = false;
-var animFrame = null;
-var lastResult = '';
-var facingMode = 'environment';
+var P = new URLSearchParams(location.search);
+var scanTarget = P.get('target') || 'pesanan';
+var scanType = P.get('type') || 'barcode';
+var html5QrCode = null;
+var lastVal = '';
 var audioCtx = null;
+var scanPaused = false;
 
-// ============================================
-// AUDIO
-// ============================================
+// Badge
+var bg = document.getElementById('badge');
+if (scanTarget === 'resi') { bg.textContent = '🚚 No. Resi'; bg.className = 'badge badge-resi'; }
+else if (scanTarget === 'search') { bg.textContent = '🔍 Cari'; bg.className = 'badge badge-search'; }
+else { bg.textContent = '📋 No. Pesanan'; bg.className = 'badge badge-pesanan'; }
+
+// Audio
 function beep(f, d) {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -343,200 +129,167 @@ function beep(f, d) {
     g.gain.setValueAtTime(.4, audioCtx.currentTime);
     g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + (d || 200) / 1000);
     o.start(); o.stop(audioCtx.currentTime + (d || 200) / 1000);
-  } catch(e) {}
+  } catch (e) {}
 }
-function beepOK() { beep(1200, 150); setTimeout(function() { beep(1600, 200); }, 180); }
-function vib() { try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch(e) {} }
+function beepOK() { beep(1200, 150); setTimeout(function () { beep(1600, 200); }, 180); }
+function vib() { try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch (e) {} }
 
-// ============================================
-// START CAMERA
-// ============================================
-function startCamera() {
-  document.getElementById('statusMsg').textContent = '⏳ Meminta izin kamera...';
-  document.getElementById('statusMsg').className = 'status-msg';
+// Toast
+function toast(m) {
+  var t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 3000);
+}
 
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showError('Browser Tidak Support', 'Browser ini tidak mendukung akses kamera.', [
-      'Gunakan Google Chrome terbaru',
-      'Pastikan HTTPS (bukan HTTP)'
-    ]);
-    return;
+// Formats
+function getFmts() {
+  if (scanType === 'qrcode') return [Html5QrcodeSupportedFormats.QR_CODE];
+  return [
+    Html5QrcodeSupportedFormats.QR_CODE,
+    Html5QrcodeSupportedFormats.CODE_128,
+    Html5QrcodeSupportedFormats.CODE_39,
+    Html5QrcodeSupportedFormats.CODE_93,
+    Html5QrcodeSupportedFormats.EAN_13,
+    Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,
+    Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.ITF,
+    Html5QrcodeSupportedFormats.CODABAR
+  ];
+}
+
+// Start
+function startScanner() {
+  document.getElementById('msg').textContent = '⏳ Meminta izin kamera...';
+  document.getElementById('msg').className = 'msg';
+  document.getElementById('errPanel').classList.remove('show');
+  document.getElementById('overlay').style.display = 'block';
+  scanPaused = false;
+
+  if (html5QrCode) {
+    try { html5QrCode.stop().then(function(){ html5QrCode.clear(); initScan(); }).catch(function(){ try{html5QrCode.clear();}catch(e){} initScan(); }); }
+    catch(e) { initScan(); }
+  } else {
+    initScan();
   }
+}
 
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
-  })
-  .then(function(s) {
-    stream = s;
-    var video = document.getElementById('video');
-    video.srcObject = s;
-    video.style.display = 'block';
-    document.getElementById('errorPanel').classList.remove('show');
-    document.getElementById('scanGuide').style.display = 'block';
-    document.getElementById('scanLine').style.display = 'block';
+function initScan() {
+  html5QrCode = new Html5Qrcode('reader');
 
-    video.onloadedmetadata = function() {
-      video.play();
-      scanning = true;
-      document.getElementById('statusMsg').textContent = '📷 Arahkan kamera ke barcode / QR code...';
-      startDetection(video);
-    };
-  })
-  .catch(function(err) {
-    console.log('Camera error:', err.name, err.message);
-    
-    if (err.name === 'NotAllowedError') {
-      showError('🚫 Izin Kamera Ditolak', 'Anda perlu mengizinkan akses kamera.', [
-        'Klik ikon 🔒 di address bar',
-        'Cari "Camera" → pilih "Allow"',
-        'Klik tombol "Izinkan & Coba Lagi" di bawah'
-      ]);
-    } else if (err.name === 'NotFoundError') {
-      showError('📷 Kamera Tidak Ditemukan', 'Perangkat tidak memiliki kamera.', [
-        'Pastikan perangkat ada kamera',
-        'Coba di HP dengan kamera'
-      ]);
-    } else if (err.name === 'NotReadableError') {
-      showError('⚠️ Kamera Sibuk', 'Kamera sedang digunakan aplikasi lain.', [
-        'Tutup aplikasi lain yang pakai kamera',
-        'Coba lagi'
-      ]);
-    } else {
-      // Fallback: coba kamera depan
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-        .then(function(s) {
-          stream = s;
-          facingMode = 'user';
-          var video = document.getElementById('video');
-          video.srcObject = s;
-          video.style.display = 'block';
-          document.getElementById('errorPanel').classList.remove('show');
-          document.getElementById('scanGuide').style.display = 'block';
-          document.getElementById('scanLine').style.display = 'block';
-          video.onloadedmetadata = function() {
-            video.play(); scanning = true;
-            document.getElementById('statusMsg').textContent = '📷 Arahkan ke barcode/QR...';
-            startDetection(video);
-          };
-        })
-        .catch(function() {
-          showError('❌ Error: ' + err.name, err.message, [
-            'Refresh halaman',
-            'Coba browser Chrome terbaru'
-          ]);
-        });
-    }
+  var cfg = {
+    fps: 12,
+    qrbox: function (w, h) {
+      var m = Math.min(w, h);
+      var s = Math.floor(m * 0.72);
+      return { width: s, height: Math.floor(s * (scanType === 'barcode' ? 0.45 : 0.85)) };
+    },
+    formatsToSupport: getFmts(),
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+  };
+
+  html5QrCode.start(
+    { facingMode: 'environment' }, cfg, onSuccess, function () {}
+  ).then(function () {
+    document.getElementById('msg').textContent = '📷 Arahkan kamera ke barcode / QR code...';
+    document.getElementById('errPanel').classList.remove('show');
+  }).catch(function (err) {
+    // Coba kamera depan
+    html5QrCode.start(
+      { facingMode: 'user' }, cfg, onSuccess, function () {}
+    ).then(function () {
+      document.getElementById('msg').textContent = '📷 Arahkan ke barcode/QR...';
+      document.getElementById('errPanel').classList.remove('show');
+    }).catch(function (err2) {
+      showErr(err2);
+    });
   });
 }
 
-function showError(title, desc, steps) {
-  document.getElementById('video').style.display = 'none';
-  document.getElementById('scanGuide').style.display = 'none';
-  document.getElementById('scanLine').style.display = 'none';
-  document.getElementById('errTitle').textContent = title;
-  document.getElementById('errDesc').textContent = desc;
-  var html = '';
-  for (var i = 0; i < steps.length; i++) html += '<div>' + (i + 1) + '. ' + steps[i] + '</div>';
-  document.getElementById('errSteps').innerHTML = html;
-  document.getElementById('errorPanel').classList.add('show');
-  document.getElementById('statusMsg').textContent = '❌ Kamera tidak tersedia';
-  document.getElementById('statusMsg').className = 'status-msg err';
-}
-
-function retryCamera() {
-  document.getElementById('errorPanel').classList.remove('show');
-  startCamera();
-}
-
-function switchCamera() {
-  facingMode = facingMode === 'environment' ? 'user' : 'environment';
-  stopStream();
-  lastResult = '';
-  startCamera();
-}
-
-function stopStream() {
-  scanning = false;
-  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-  if (stream) {
-    try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch(e) {}
-    stream = null;
-  }
-}
-
-// ============================================
-// BARCODE DETECTION
-// ============================================
-function startDetection(video) {
-  if (!('BarcodeDetector' in window)) {
-    document.getElementById('statusMsg').textContent = '⚠️ Browser tidak support auto-scan. Gunakan Chrome Android terbaru.';
-    document.getElementById('statusMsg').className = 'status-msg err';
-    return;
-  }
-
-  var formats;
-  if (scanType === 'qrcode') {
-    formats = ['qr_code'];
-  } else {
-    formats = ['code_128','code_39','code_93','ean_13','ean_8','upc_a','upc_e','itf','codabar','qr_code'];
-  }
-
-  var detector;
-  try { detector = new BarcodeDetector({ formats: formats }); }
-  catch(e) { detector = new BarcodeDetector(); }
-
-  function loop() {
-    if (!scanning) return;
-    detector.detect(video).then(function(codes) {
-      if (codes.length > 0 && codes[0].rawValue !== lastResult) {
-        lastResult = codes[0].rawValue;
-        onDetected(codes[0].rawValue, codes[0].format);
-      } else {
-        animFrame = requestAnimationFrame(loop);
-      }
-    }).catch(function() {
-      animFrame = requestAnimationFrame(loop);
-    });
-  }
-  loop();
-}
-
-// ============================================
-// ON DETECTED
-// ============================================
-function onDetected(value, format) {
-  scanning = false;
-  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+function onSuccess(text, result) {
+  if (scanPaused) return;
+  if (text === lastVal) return;
+  lastVal = text;
+  scanPaused = true;
 
   beepOK(); vib();
 
-  // Flash effect
-  var flash = document.getElementById('flash');
-  flash.classList.remove('show');
-  void flash.offsetWidth; // force reflow
-  flash.classList.add('show');
-  setTimeout(function() { flash.classList.remove('show'); }, 300);
+  // Flash
+  var fl = document.getElementById('flash');
+  fl.classList.remove('show'); void fl.offsetWidth; fl.classList.add('show');
+  setTimeout(function () { fl.classList.remove('show'); }, 300);
 
-  var typeLabel = format === 'qr_code' ? 'QR Code' : 'Barcode (' + format + ')';
+  // Pause scanner
+  try { html5QrCode.pause(true); } catch (e) {}
 
-  document.getElementById('resValue').textContent = value;
+  var fmt = 'Barcode';
+  try { fmt = result.result.format.formatName; } catch (e) {}
+  var typeLabel = fmt === 'QR_CODE' ? 'QR Code' : 'Barcode (' + fmt + ')';
+
+  document.getElementById('resVal').textContent = text;
   document.getElementById('resType').textContent = typeLabel;
-  document.getElementById('resultBox').classList.add('show');
-  document.getElementById('btnRow').style.display = 'flex';
-  document.getElementById('statusMsg').textContent = '✅ Berhasil scan!';
-  document.getElementById('statusMsg').className = 'status-msg ok';
-  document.getElementById('scanGuide').style.display = 'none';
-  document.getElementById('scanLine').style.display = 'none';
+  document.getElementById('resBox').classList.add('show');
+  document.getElementById('btns').style.display = 'flex';
+  document.getElementById('msg').textContent = '✅ Berhasil scan!';
+  document.getElementById('msg').className = 'msg ok';
+  document.getElementById('overlay').style.display = 'none';
+}
+
+function showErr(err) {
+  var msg = err.toString();
+  var title = '❌ Kamera Tidak Bisa Diakses';
+  var desc = 'Browser memblokir atau tidak bisa mengakses kamera.';
+  var steps = '';
+
+  if (msg.indexOf('NotAllowed') >= 0 || msg.indexOf('Permission') >= 0) {
+    title = '🚫 Izin Kamera Ditolak';
+    desc = 'Anda perlu mengizinkan akses kamera untuk scan barcode.';
+    steps = '<div>1. Klik ikon 🔒 di address bar browser</div><div>2. Cari "Camera" atau "Kamera"</div><div>3. Ubah ke "Allow" / "Izinkan"</div><div>4. Klik tombol "Coba Lagi" di bawah</div>';
+  } else if (msg.indexOf('NotFound') >= 0) {
+    title = '📷 Kamera Tidak Ditemukan';
+    desc = 'Perangkat ini tidak memiliki kamera.';
+    steps = '<div>1. Gunakan HP yang ada kameranya</div><div>2. Atau sambungkan webcam external</div>';
+  } else if (msg.indexOf('NotReadable') >= 0) {
+    title = '⚠️ Kamera Sedang Dipakai';
+    desc = 'Kamera sedang digunakan aplikasi lain.';
+    steps = '<div>1. Tutup aplikasi lain yang pakai kamera</div><div>2. Tutup tab lain yang pakai kamera</div><div>3. Klik "Coba Lagi"</div>';
+  } else {
+    steps = '<div>1. Pastikan browser Chrome terbaru</div><div>2. Pastikan halaman via HTTPS</div><div>3. Refresh dan coba lagi</div>';
+  }
+
+  document.getElementById('errTitle').textContent = title;
+  document.getElementById('errDesc').textContent = desc;
+  document.getElementById('errSteps').innerHTML = steps;
+  document.getElementById('errPanel').classList.add('show');
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('msg').textContent = '❌ Kamera error';
+  document.getElementById('msg').className = 'msg err';
+}
+
+function retry() {
+  lastVal = '';
+  startScanner();
+}
+
+function doRescan() {
+  lastVal = '';
+  scanPaused = false;
+  document.getElementById('resBox').classList.remove('show');
+  document.getElementById('btns').style.display = 'none';
+  document.getElementById('msg').textContent = '📷 Arahkan ke barcode/QR...';
+  document.getElementById('msg').className = 'msg';
+  document.getElementById('overlay').style.display = 'block';
+  try { html5QrCode.resume(); } catch (e) { startScanner(); }
 }
 
 // ============================================
-// SEND RESULT BACK TO GAS
+// KIRIM HASIL KE GOOGLE APPS SCRIPT
 // ============================================
 function sendResult() {
-  var value = document.getElementById('resValue').textContent;
+  var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resType').textContent;
 
-  // Method 1: postMessage to opener window
+  // Method 1: postMessage ke window opener (GAS)
   if (window.opener) {
     try {
       window.opener.postMessage({
@@ -546,86 +299,53 @@ function sendResult() {
         value: value,
         type: type
       }, '*');
-      showToast('✅ Kode dikirim!');
-      setTimeout(function() { window.close(); }, 800);
+      toast('✅ Kode dikirim!');
+      stopAll();
+      setTimeout(function () { window.close(); }, 800);
       return;
-    } catch(e) {}
+    } catch (e) {}
   }
 
-  // Method 2: Copy to clipboard + show instruction
+  // Method 2: Copy ke clipboard
+  copyText(value);
+}
+
+function copyText(val) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(value).then(function() {
-      showToast('📋 Kode disalin! Paste di form utama.');
-      setTimeout(function() { window.close(); }, 1500);
-    }).catch(function() {
-      fallbackCopy(value);
-    });
+    navigator.clipboard.writeText(val).then(function () {
+      toast('📋 Disalin! Paste di form.');
+      setTimeout(function () { try { window.close(); } catch(e){} }, 1500);
+    }).catch(function () { fbCopy(val); });
   } else {
-    fallbackCopy(value);
+    fbCopy(val);
   }
 }
 
-function fallbackCopy(value) {
-  // Fallback copy
+function fbCopy(val) {
   var ta = document.createElement('textarea');
-  ta.value = value;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand('copy');
-    showToast('📋 Kode disalin! Paste di form utama.');
-  } catch(e) {
-    showToast('Kode: ' + value + ' — Salin manual');
-  }
+  ta.value = val; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('📋 Disalin!'); } catch (e) { toast('Kode: ' + val); }
   document.body.removeChild(ta);
-  setTimeout(function() { window.close(); }, 2000);
+  setTimeout(function () { try { window.close(); } catch(e){} }, 2000);
 }
 
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 3000);
-}
-
-function rescan() {
-  lastResult = '';
-  scanning = true;
-  document.getElementById('resultBox').classList.remove('show');
-  document.getElementById('btnRow').style.display = 'none';
-  document.getElementById('statusMsg').textContent = '📷 Arahkan ke barcode/QR...';
-  document.getElementById('statusMsg').className = 'status-msg';
-  document.getElementById('scanGuide').style.display = 'block';
-  document.getElementById('scanLine').style.display = 'block';
-
-  var video = document.getElementById('video');
-  if (video.srcObject) startDetection(video);
+function stopAll() {
+  scanPaused = true;
+  if (html5QrCode) {
+    try { html5QrCode.stop().then(function(){ html5QrCode.clear(); }).catch(function(){}); } catch(e){}
+  }
 }
 
 function closePage() {
-  stopStream();
-  if (window.opener) {
-    try { window.close(); } catch(e) {}
-  }
-  // Fallback jika tidak bisa close
-  window.history.back();
+  stopAll();
+  try { window.close(); } catch (e) {}
+  setTimeout(function(){ window.history.back(); }, 300);
 }
 
-// ============================================
-// INIT
-// ============================================
-window.addEventListener('load', function() {
-  // Simpan referensi window GAS
-  gasWindowRef = window.opener;
-  startCamera();
-});
-
-// Cleanup saat halaman ditutup
-window.addEventListener('beforeunload', function() {
-  stopStream();
-});
+// Init
+window.addEventListener('load', function () { startScanner(); });
+window.addEventListener('beforeunload', function () { stopAll(); });
 </script>
 </body>
 </html>
