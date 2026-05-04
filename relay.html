@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Scan dari HP</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif}
@@ -43,11 +46,11 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .btn-no{background:#ef4444;color:#fff}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
 .toast.show{display:block}
-.sent-screen{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:30;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
-.sent-screen.show{display:flex}
-.sent-screen .icon{font-size:4rem;margin-bottom:16px}
-.sent-screen .msg{font-size:1.1rem;font-weight:600;color:#10b981;margin-bottom:8px}
-.sent-screen .sub{font-size:.85rem;color:#94a3b8}
+.sent{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:30;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.sent.show{display:flex}
+.sent .icon{font-size:4rem;margin-bottom:16px}
+.sent .msg{font-size:1.1rem;font-weight:600;color:#10b981;margin-bottom:8px}
+.sent .sub{font-size:.85rem;color:#94a3b8}
 .loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
 .spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -67,17 +70,13 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 
   <div class="cam">
     <div id="reader"></div>
-
-    <div class="sent-screen" id="sentScreen">
+    <div class="sent" id="sentScreen">
       <div class="icon">✅</div>
-      <div class="msg">Kode berhasil dikirim ke PC!</div>
+      <div class="msg">Kode dikirim ke PC!</div>
       <div class="sub" id="sentVal">-</div>
-      <br>
-      <div class="sub">Anda bisa menutup halaman ini.</div>
-      <br>
+      <br><div class="sub">Halaman ini bisa ditutup.</div><br>
       <button class="btn btn-ok" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
     </div>
-
     <div class="errbox" id="errbox">
       <div class="icon">📷</div>
       <div class="title" id="errT">Error</div>
@@ -85,11 +84,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
       <button class="btn btn-ok" onclick="startScan()" style="max-width:200px;margin-bottom:8px">🔄 Coba Lagi</button>
       <button class="btn btn-no" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
     </div>
-
-    <div class="loading" id="loadMsg">
-      <div class="spinner"></div>
-      <div>Memulai scanner...</div>
-    </div>
+    <div class="loading" id="loadMsg"><div class="spinner"></div><div>Memulai scanner...</div></div>
   </div>
 
   <div class="panel">
@@ -104,10 +99,25 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
+// ====================================================
+// FIREBASE CONFIG - GANTI DENGAN MILIK ANDA
+// ====================================================
+var firebaseConfig = {
+  apiKey: "GANTI_API_KEY",
+  authDomain: "GANTI_PROJECT.firebaseapp.com",
+  databaseURL: "https://GANTI_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "GANTI_PROJECT"
+};
+
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+// ====================================================
+// PARAMS
+// ====================================================
 var params = new URLSearchParams(location.search);
 var scanTarget = params.get('target') || 'pesanan';
 var scanType = params.get('type') || 'barcode';
@@ -123,21 +133,29 @@ var lastVal = '';
 var paused = false;
 var audioCtx = null;
 
-// Firebase-like realtime → kita pakai BroadcastChannel + localStorage polling
-// Paling simpel: kirim via server endpoint atau localStorage
-
 function beep() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function t(f,dl,d){var o=audioCtx.createOscillator();var g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=f;var tm=audioCtx.currentTime+dl;g.gain.setValueAtTime(.3,tm);g.gain.exponentialRampToValueAtTime(.001,tm+d);o.start(tm);o.stop(tm+d)}
-    t(1200,0,.15); t(1600,.18,.2);
-  } catch(e){}
+    function t(f,dl,d) {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.frequency.value = f;
+      var tm = audioCtx.currentTime + dl;
+      g.gain.setValueAtTime(.3, tm);
+      g.gain.exponentialRampToValueAtTime(.001, tm + d);
+      o.start(tm); o.stop(tm + d);
+    }
+    t(1200, 0, .15);
+    t(1600, .18, .2);
+  } catch (e) {}
 }
 
 function showToast(m) {
   var t = document.getElementById('toast');
-  t.textContent = m; t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show')}, 3000);
+  t.textContent = m;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
 }
 
 function setStatus(m, c) {
@@ -169,7 +187,8 @@ function startScan() {
   document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('resBox').classList.remove('show');
   document.getElementById('btns').style.display = 'none';
-  paused = false; lastVal = '';
+  paused = false;
+  lastVal = '';
 
   if (typeof Html5Qrcode === 'undefined') {
     document.getElementById('loadMsg').style.display = 'none';
@@ -181,58 +200,67 @@ function startScan() {
 
   if (scanner) {
     try {
-      scanner.stop().then(function(){try{scanner.clear()}catch(e){}doInit()}).catch(function(){try{scanner.clear()}catch(e){}doInit()});
-    } catch(e){doInit()}
-  } else { doInit(); }
+      scanner.stop().then(function() {
+        try { scanner.clear(); } catch (e) {}
+        doInit();
+      }).catch(function() {
+        try { scanner.clear(); } catch (e) {}
+        doInit();
+      });
+    } catch (e) { doInit(); }
+  } else {
+    doInit();
+  }
 }
 
 function doInit() {
   document.getElementById('reader').innerHTML = '';
   scanner = new Html5Qrcode('reader');
+
   var config = {
     fps: 15,
-    qrbox: function(vw,vh) {
-      var m = Math.min(vw,vh);
+    qrbox: function(vw, vh) {
+      var m = Math.min(vw, vh);
       var s = Math.floor(m * 0.75);
       s = Math.max(120, Math.min(s, 350));
-      if (scanType === 'barcode') return {width:s, height:Math.max(80, Math.floor(s*.4))};
-      return {width:s, height:Math.max(100, Math.floor(s*.85))};
+      if (scanType === 'barcode') return { width: s, height: Math.max(80, Math.floor(s * .4)) };
+      return { width: s, height: Math.max(100, Math.floor(s * .85)) };
     },
     formatsToSupport: getFmts(),
-    experimentalFeatures: {useBarCodeDetectorIfSupported:true}
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
   };
 
-  scanner.start({facingMode:'environment'}, config, onOK, function(){})
-  .then(function(){
-    document.getElementById('loadMsg').style.display = 'none';
-    setStatus('📷 Arahkan ke barcode / QR code...', '');
-  }).catch(function(err){
-    scanner.start({facingMode:'user'}, config, onOK, function(){})
-    .then(function(){
+  scanner.start({ facingMode: 'environment' }, config, onOK, function() {})
+    .then(function() {
       document.getElementById('loadMsg').style.display = 'none';
-      setStatus('📷 Arahkan ke barcode/QR...', '');
-    }).catch(function(){
-      document.getElementById('loadMsg').style.display = 'none';
-      var msg = err.toString();
-      document.getElementById('errT').textContent = msg.indexOf('NotAllowed')>=0 ? '🚫 Izin Ditolak' : '❌ Kamera Error';
-      document.getElementById('errD').textContent = msg.indexOf('NotAllowed')>=0 ? 'Klik 🔒 → Camera → Allow' : msg;
-      document.getElementById('errbox').classList.add('show');
-      setStatus('❌ Error', 'err');
+      setStatus('📷 Arahkan ke barcode / QR code...', '');
+    }).catch(function(err) {
+      scanner.start({ facingMode: 'user' }, config, onOK, function() {})
+        .then(function() {
+          document.getElementById('loadMsg').style.display = 'none';
+          setStatus('📷 Arahkan ke barcode/QR...', '');
+        }).catch(function() {
+          document.getElementById('loadMsg').style.display = 'none';
+          var msg = err.toString();
+          document.getElementById('errT').textContent = msg.indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
+          document.getElementById('errD').textContent = msg.indexOf('NotAllowed') >= 0 ? '🔒 → Camera → Allow' : msg;
+          document.getElementById('errbox').classList.add('show');
+        });
     });
-  });
 }
 
 function onOK(text, result) {
   if (paused) return;
   if (text === lastVal) return;
-  lastVal = text; paused = true;
+  lastVal = text;
+  paused = true;
   beep();
-  try{if(navigator.vibrate)navigator.vibrate([100,50,100])}catch(e){}
-  try{scanner.pause(true)}catch(e){}
+  try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch (e) {}
+  try { scanner.pause(true); } catch (e) {}
 
   var fmt = 'Barcode';
-  try{fmt = result.result.format.formatName}catch(e){}
-  var typeLabel = (fmt==='QR_CODE') ? 'QR Code' : 'Barcode ('+fmt+')';
+  try { fmt = result.result.format.formatName; } catch (e) {}
+  var typeLabel = (fmt === 'QR_CODE') ? 'QR Code' : 'Barcode (' + fmt + ')';
 
   document.getElementById('resVal').textContent = text;
   document.getElementById('resTyp').textContent = typeLabel;
@@ -241,63 +269,57 @@ function onOK(text, result) {
   setStatus('✅ Berhasil!', 'ok');
 }
 
-// KIRIM KE PC via localStorage (same origin)
+// ====================================================
+// KIRIM KE PC VIA FIREBASE (INSTAN!)
+// ====================================================
 function doSend() {
   var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resTyp').textContent;
 
-  var data = {
+  setStatus('⏳ Mengirim...', '');
+
+  // Write ke Firebase
+  db.ref('scans/' + sessionId).set({
     target: scanTarget,
     value: value,
     type: type,
-    time: Date.now(),
-    session: sessionId
-  };
+    time: Date.now()
+  }).then(function() {
+    // Hapus setelah 30 detik (auto cleanup)
+    db.ref('scans/' + sessionId).onDisconnect().remove();
+    setTimeout(function() {
+      db.ref('scans/' + sessionId).remove();
+    }, 30000);
 
-  var dataStr = JSON.stringify(data);
+    document.getElementById('sentVal').textContent = value + ' (' + type + ')';
+    document.getElementById('sentScreen').classList.add('show');
+    setStatus('✅ Dikirim!', 'ok');
+    showToast('✅ Kode dikirim ke PC!');
 
-  // Method 1: BroadcastChannel (INSTAN, same origin)
-  try {
-    var bc = new BroadcastChannel('packing_scan_channel');
-    bc.postMessage(data);
-    bc.close();
-  } catch (e) {}
-
-  // Method 2: localStorage (trigger storage event di tab lain)
-  try {
-    localStorage.setItem('scan_result_' + sessionId, dataStr);
-    // Trigger ulang supaya storage event pasti ke-fire
-    localStorage.setItem('scan_ping', Date.now().toString());
-  } catch (e) {}
-
-  // Tampilkan layar sukses
-  document.getElementById('sentVal').textContent = value + ' (' + type + ')';
-  document.getElementById('sentScreen').classList.add('show');
-  setStatus('✅ Dikirim!', 'ok');
-  showToast('✅ Kode dikirim ke PC!');
-
-  try {
-    scanner.stop().then(function() { scanner.clear(); }).catch(function() {});
-  } catch (e) {}
+    try { scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); } catch (e) {}
+  }).catch(function(err) {
+    setStatus('❌ Gagal kirim: ' + err.message, 'err');
+  });
 }
 
 function doRescan() {
-  lastVal = ''; paused = false;
+  lastVal = '';
+  paused = false;
   document.getElementById('resBox').classList.remove('show');
   document.getElementById('btns').style.display = 'none';
   setStatus('📷 Arahkan ke barcode/QR...', '');
-  try{scanner.resume()}catch(e){startScan()}
+  try { scanner.resume(); } catch (e) { startScan(); }
 }
 
 function doClose() {
-  try{if(scanner)scanner.stop().then(function(){scanner.clear()}).catch(function(){})}catch(e){}
-  try{window.close()}catch(e){}
-  setTimeout(function(){window.history.back()}, 300);
+  try { if (scanner) scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); } catch (e) {}
+  try { window.close(); } catch (e) {}
+  setTimeout(function() { window.history.back(); }, 300);
 }
 
-window.addEventListener('load', function(){startScan()});
-window.addEventListener('beforeunload', function(){
-  try{if(scanner)scanner.stop().then(function(){scanner.clear()}).catch(function(){})}catch(e){}
+window.addEventListener('load', function() { startScan(); });
+window.addEventListener('beforeunload', function() {
+  try { if (scanner) scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); } catch (e) {}
 });
 </script>
 </body>
