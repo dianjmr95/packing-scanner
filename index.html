@@ -6,99 +6,349 @@
 <title>Barcode Scanner</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
-:root{--success:#10b981;--danger:#ef4444;--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--dim:#94a3b8}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--card);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;z-index:10}
-.topbar h1{font-size:.95rem;display:flex;align-items:center;gap:8px}
-.badge{font-size:.68rem;padding:4px 12px;border-radius:20px;font-weight:600}
-.badge-pesanan{background:rgba(124,58,237,.2);color:#a78bfa}
-.badge-resi{background:rgba(16,185,129,.2);color:#6ee7b7}
-.badge-search{background:rgba(59,130,246,.2);color:#93c5fd}
-.close-x{background:var(--danger);border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
-.close-x:active{transform:scale(.9)}
-.vid-area{flex:1;position:relative;overflow:hidden;background:#000;min-height:200px}
-#reader{width:100%!important;height:100%!important}
-#reader video{width:100%!important;height:100%!important;object-fit:cover!important}
-#reader img[alt="Info icon"]{display:none!important}
-#reader__dashboard_section{position:absolute!important;bottom:0;left:0;right:0;background:rgba(0,0,0,.7)!important;padding:8px!important;z-index:5}
-#reader__dashboard_section button{background:var(--success)!important;color:#fff!important;border:none!important;padding:8px 16px!important;border-radius:8px!important;font-weight:600!important;cursor:pointer!important}
-#reader__dashboard_section select{background:#333!important;color:#fff!important;border:1px solid #555!important;padding:6px 10px!important;border-radius:6px!important}
-#reader__dashboard_section span{color:#ccc!important;font-size:.8rem!important}
-#reader__scan_region{min-height:200px!important}
-#reader__scan_region img{display:none!important}
-.scan-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:4}
-.scan-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:250px;height:170px;border:2px solid rgba(255,255,255,.3);border-radius:14px}
-.scan-frame .c{position:absolute;width:26px;height:26px;border:3px solid var(--success)}
-.scan-frame .c.tl{top:-1px;left:-1px;border-right:none;border-bottom:none;border-radius:8px 0 0 0}
-.scan-frame .c.tr{top:-1px;right:-1px;border-left:none;border-bottom:none;border-radius:0 8px 0 0}
-.scan-frame .c.bl{bottom:-1px;left:-1px;border-right:none;border-top:none;border-radius:0 0 0 8px}
-.scan-frame .c.br{bottom:-1px;right:-1px;border-left:none;border-top:none;border-radius:0 0 8px 0}
-.sweep{position:absolute;left:8%;width:84%;height:2px;background:linear-gradient(90deg,transparent,var(--success),transparent);animation:sweep 2s ease-in-out infinite}
-@keyframes sweep{0%{top:20%}50%{top:75%}100%{top:20%}}
-.flash{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(16,185,129,.25);display:none;z-index:8}
-.flash.show{display:block;animation:fl .3s}
-@keyframes fl{from{opacity:1}to{opacity:0}}
-.bot{padding:14px 20px;background:var(--card);border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;z-index:10}
-.msg{text-align:center;font-size:.85rem;color:var(--dim);margin-bottom:10px}
-.msg.ok{color:var(--success);font-weight:600}
-.msg.err{color:var(--danger);font-weight:600}
-.res-box{background:rgba(16,185,129,.1);border:2px solid var(--success);border-radius:12px;padding:14px;text-align:center;margin-bottom:10px;display:none}
-.res-box.show{display:block}
-.res-box .val{font-size:1.15rem;font-weight:700;color:var(--success);word-break:break-all;margin-bottom:4px}
-.res-box .typ{font-size:.72rem;color:var(--dim)}
-.btns{display:flex;gap:8px}
-.btn{flex:1;padding:14px;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit}
-.btn:active{transform:scale(.96)}
-.btn-ok{background:var(--success);color:#fff}
-.btn-warn{background:#f59e0b;color:#fff}
-.btn-no{background:var(--danger);color:#fff}
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:12px 24px;border-radius:10px;font-weight:600;font-size:.88rem;display:none;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.toast.show{display:block;animation:tin .3s}
-@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-.err-panel{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:20;padding:40px 24px;text-align:center;overflow-y:auto}
-.err-panel.show{display:block}
-.err-panel .icon{font-size:3.5rem;margin-bottom:16px}
-.err-panel .title{font-size:1.1rem;font-weight:700;color:var(--danger);margin-bottom:8px}
-.err-panel .desc{font-size:.85rem;color:var(--dim);margin-bottom:16px;line-height:1.7}
-.err-panel .steps{text-align:left;font-size:.82rem;color:var(--dim);line-height:2.2;margin-bottom:20px;padding-left:24px}
-@media(max-width:400px){.scan-frame{width:200px;height:130px}}
+  :root {
+    --ok: #10b981;
+    --err: #ef4444;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --txt: #f1f5f9;
+    --dim: #94a3b8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--txt);
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* LAYOUT: flex column full height */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* TOP BAR */
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--card);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    flex-shrink: 0;
+    min-height: 48px;
+  }
+  .top h1 {
+    font-size: .85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .badge {
+    font-size: .62rem;
+    padding: 3px 8px;
+    border-radius: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge-pesanan { background: rgba(124,58,237,.2); color: #a78bfa; }
+  .badge-resi { background: rgba(16,185,129,.2); color: #6ee7b7; }
+  .badge-search { background: rgba(59,130,246,.2); color: #93c5fd; }
+
+  .xbtn {
+    background: var(--err);
+    border: none;
+    color: #fff;
+    min-width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .xbtn:active { transform: scale(.9); }
+
+  /* SCANNER VIEW */
+  .scanview {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+    min-height: 0; /* penting untuk flex shrink */
+  }
+
+  /* html5-qrcode overrides */
+  #reader {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+  }
+  #reader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  /* Sembunyikan elemen UI bawaan library yang mengganggu */
+  #reader img[alt="Info icon"],
+  #reader__header_message,
+  #reader__status_span {
+    display: none !important;
+  }
+  /* Style dashboard bawaan library */
+  #reader__dashboard {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: rgba(0,0,0,.75) !important;
+    padding: 6px 8px !important;
+    z-index: 5;
+    max-height: 60px;
+    overflow: hidden;
+  }
+  #reader__dashboard button {
+    background: var(--ok) !important;
+    color: #fff !important;
+    border: none !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    font-size: .75rem !important;
+  }
+  #reader__dashboard select {
+    background: #333 !important;
+    color: #fff !important;
+    border: 1px solid #555 !important;
+    padding: 4px 6px !important;
+    border-radius: 4px !important;
+    font-size: .75rem !important;
+  }
+  #reader__dashboard span,
+  #reader__dashboard a {
+    color: #ccc !important;
+    font-size: .7rem !important;
+  }
+  #reader__scan_region {
+    min-height: 100px !important;
+    overflow: hidden !important;
+  }
+  #reader__scan_region img {
+    display: none !important;
+  }
+
+  /* Custom scan overlay */
+  .scanover {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 4;
+  }
+  .scanframe {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(70vw, 250px);
+    height: min(50vw, 170px);
+    border: 2px solid rgba(255,255,255,.3);
+    border-radius: 12px;
+  }
+  .scanframe .c {
+    position: absolute;
+    width: min(7vw, 24px);
+    height: min(7vw, 24px);
+    border: 3px solid var(--ok);
+  }
+  .scanframe .c.tl { top:-1px; left:-1px; border-right:none; border-bottom:none; border-radius:8px 0 0 0; }
+  .scanframe .c.tr { top:-1px; right:-1px; border-left:none; border-bottom:none; border-radius:0 8px 0 0; }
+  .scanframe .c.bl { bottom:-1px; left:-1px; border-right:none; border-top:none; border-radius:0 0 0 8px; }
+  .scanframe .c.br { bottom:-1px; right:-1px; border-left:none; border-top:none; border-radius:0 0 8px 0; }
+
+  .sweep {
+    position: absolute;
+    left: 10%; width: 80%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ok), transparent);
+    animation: sw 2s ease-in-out infinite;
+    z-index: 5;
+    pointer-events: none;
+  }
+  @keyframes sw { 0%{top:20%} 50%{top:75%} 100%{top:20%} }
+
+  .flash {
+    position: absolute;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(16,185,129,.25);
+    display: none;
+    z-index: 8;
+  }
+  .flash.show { display:block; animation: fl .3s; }
+  @keyframes fl { from{opacity:1} to{opacity:0} }
+
+  /* BOTTOM PANEL */
+  .bot {
+    padding: 10px 12px;
+    background: var(--card);
+    border-top: 1px solid rgba(255,255,255,.08);
+    flex-shrink: 0;
+  }
+  .msg {
+    text-align: center;
+    font-size: .8rem;
+    color: var(--dim);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .msg.ok { color: var(--ok); font-weight: 600; }
+  .msg.er { color: var(--err); font-weight: 600; }
+
+  .resbox {
+    background: rgba(16,185,129,.1);
+    border: 2px solid var(--ok);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    margin-bottom: 8px;
+    display: none;
+  }
+  .resbox.show { display: block; }
+  .resbox .val {
+    font-size: min(4.5vw, 1.1rem);
+    font-weight: 700;
+    color: var(--ok);
+    word-break: break-all;
+    margin-bottom: 2px;
+  }
+  .resbox .typ { font-size: .68rem; color: var(--dim); }
+
+  .btns { display: flex; gap: 6px; }
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: inherit;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn-ok { background: var(--ok); color: #fff; }
+  .btn-warn { background: #f59e0b; color: #fff; }
+  .btn-no { background: var(--err); color: #fff; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 80px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--ok);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .82rem;
+    display: none;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { display:block; animation: tin .3s; }
+  @keyframes tin { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+  /* ERROR PANEL */
+  .errpanel {
+    display: none;
+    position: absolute;
+    top:0; left:0; right:0; bottom:0;
+    background: var(--bg);
+    z-index: 20;
+    padding: 20px;
+    text-align: center;
+    overflow-y: auto;
+  }
+  .errpanel.show { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .errpanel .ei { font-size: 2.5rem; margin-bottom: 12px; }
+  .errpanel .et { font-size: .95rem; font-weight: 700; color: var(--err); margin-bottom: 6px; }
+  .errpanel .ed { font-size: .8rem; color: var(--dim); margin-bottom: 12px; line-height: 1.6; }
+  .errpanel .es { text-align: left; font-size: .78rem; color: var(--dim); line-height: 2; margin-bottom: 16px; padding-left: 20px; }
+
+  /* RESPONSIVE */
+  @media (max-height: 400px) {
+    .top { padding: 4px 8px; min-height: 36px; }
+    .top h1 { font-size: .75rem; }
+    .xbtn { min-width: 30px; height: 30px; font-size: .9rem; }
+    .bot { padding: 6px 8px; }
+    .msg { font-size: .72rem; margin-bottom: 4px; }
+    .resbox { padding: 6px; margin-bottom: 4px; }
+    .resbox .val { font-size: .85rem; }
+    .btn { padding: 8px; font-size: .75rem; }
+    .scanframe { width: min(60vw, 200px); height: min(35vw, 120px); }
+    #reader__dashboard { max-height: 40px; padding: 4px !important; }
+  }
+  @media (max-width: 300px) {
+    .top h1 { font-size: .7rem; }
+    .badge { font-size: .55rem; padding: 2px 6px; }
+    .xbtn { min-width: 28px; height: 28px; font-size: .85rem; }
+    .msg { font-size: .7rem; }
+    .btn { font-size: .72rem; padding: 8px 4px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <h1>📷 Scanner <span class="badge" id="badge">-</span></h1>
-  <button class="close-x" onclick="closePage()">✕</button>
-</div>
+<div class="app">
+  <div class="top">
+    <h1>📷 Scanner <span class="badge" id="badge">-</span></h1>
+    <button class="xbtn" onclick="closePage()">✕</button>
+  </div>
 
-<div class="vid-area" id="vidArea">
-  <div id="reader"></div>
-  <div class="scan-overlay" id="overlay">
-    <div class="scan-frame"><div class="c tl"></div><div class="c tr"></div><div class="c bl"></div><div class="c br"></div></div>
-    <div class="sweep" id="sweep"></div>
-  </div>
-  <div class="flash" id="flash"></div>
-  <div class="err-panel" id="errPanel">
-    <div class="icon">📷</div>
-    <div class="title" id="errTitle">Izin Kamera Diperlukan</div>
-    <div class="desc" id="errDesc">-</div>
-    <div class="steps" id="errSteps"></div>
-    <button class="btn btn-ok" onclick="retry()" style="max-width:260px;margin:0 auto 10px">🔄 Coba Lagi</button>
-    <button class="btn btn-no" onclick="closePage()" style="max-width:260px;margin:0 auto">✕ Kembali</button>
-  </div>
-</div>
+  <div class="scanview" id="scanview">
+    <div id="reader"></div>
+    <div class="scanover" id="overlay">
+      <div class="scanframe">
+        <div class="c tl"></div><div class="c tr"></div>
+        <div class="c bl"></div><div class="c br"></div>
+      </div>
+      <div class="sweep" id="sweep"></div>
+    </div>
+    <div class="flash" id="flash"></div>
 
-<div class="bot">
-  <div class="msg" id="msg">Memulai scanner...</div>
-  <div class="res-box" id="resBox">
-    <div class="typ" id="resType">-</div>
-    <div class="val" id="resVal">-</div>
+    <div class="errpanel" id="errp">
+      <div class="ei">📷</div>
+      <div class="et" id="erT">Izin Kamera</div>
+      <div class="ed" id="erD">-</div>
+      <div class="es" id="erS"></div>
+      <button class="btn btn-ok" onclick="doRetry()" style="max-width:220px;width:100%;margin-bottom:8px">🔄 Coba Lagi</button>
+      <button class="btn btn-no" onclick="closePage()" style="max-width:220px;width:100%">✕ Kembali</button>
+    </div>
   </div>
-  <div class="btns" id="btns" style="display:none">
-    <button class="btn btn-ok" onclick="sendResult()">✅ Kirim</button>
-    <button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button>
-    <button class="btn btn-no" onclick="closePage()">✕</button>
+
+  <div class="bot">
+    <div class="msg" id="msg">Memulai...</div>
+    <div class="resbox" id="resbox">
+      <div class="typ" id="rTyp">-</div>
+      <div class="val" id="rVal">-</div>
+    </div>
+    <div class="btns" id="btns" style="display:none">
+      <button class="btn btn-ok" onclick="sendResult()">✅ Kirim</button>
+      <button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button>
+      <button class="btn btn-no" onclick="closePage()">✕</button>
+    </div>
   </div>
 </div>
 
@@ -108,41 +358,44 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 var P = new URLSearchParams(location.search);
 var scanTarget = P.get('target') || 'pesanan';
 var scanType = P.get('type') || 'barcode';
-var html5QrCode = null;
+var scanner = null;
 var lastVal = '';
+var paused = false;
 var audioCtx = null;
-var scanPaused = false;
 
 // Badge
 var bg = document.getElementById('badge');
-if (scanTarget === 'resi') { bg.textContent = '🚚 No. Resi'; bg.className = 'badge badge-resi'; }
+if (scanTarget === 'resi') { bg.textContent = '🚚 Resi'; bg.className = 'badge badge-resi'; }
 else if (scanTarget === 'search') { bg.textContent = '🔍 Cari'; bg.className = 'badge badge-search'; }
-else { bg.textContent = '📋 No. Pesanan'; bg.className = 'badge badge-pesanan'; }
+else { bg.textContent = '📋 Pesanan'; bg.className = 'badge badge-pesanan'; }
 
 // Audio
 function beep(f, d) {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
     o.connect(g); g.connect(audioCtx.destination);
     o.frequency.value = f || 1200;
-    g.gain.setValueAtTime(.4, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + (d || 200) / 1000);
+    g.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (d || 200) / 1000);
     o.start(); o.stop(audioCtx.currentTime + (d || 200) / 1000);
   } catch (e) {}
 }
-function beepOK() { beep(1200, 150); setTimeout(function () { beep(1600, 200); }, 180); }
+function beepOK() { beep(1200, 150); setTimeout(function() { beep(1600, 200); }, 180); }
 function vib() { try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch (e) {} }
 
 // Toast
 function toast(m) {
   var t = document.getElementById('toast');
-  t.textContent = m; t.classList.add('show');
-  setTimeout(function () { t.classList.remove('show'); }, 3000);
+  t.textContent = m;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
 }
 
 // Formats
 function getFmts() {
+  if (typeof Html5QrcodeSupportedFormats === 'undefined') return undefined;
   if (scanType === 'qrcode') return [Html5QrcodeSupportedFormats.QR_CODE];
   return [
     Html5QrcodeSupportedFormats.QR_CODE,
@@ -158,138 +411,176 @@ function getFmts() {
   ];
 }
 
-// Start
-function startScanner() {
-  document.getElementById('msg').textContent = '⏳ Meminta izin kamera...';
-  document.getElementById('msg').className = 'msg';
-  document.getElementById('errPanel').classList.remove('show');
-  document.getElementById('overlay').style.display = 'block';
-  scanPaused = false;
-
-  if (html5QrCode) {
-    try { html5QrCode.stop().then(function(){ html5QrCode.clear(); initScan(); }).catch(function(){ try{html5QrCode.clear();}catch(e){} initScan(); }); }
-    catch(e) { initScan(); }
+// QR box size - responsive berdasarkan ukuran viewport
+function getQrBox(vw, vh) {
+  var minD = Math.min(vw, vh);
+  var size = Math.floor(minD * 0.65);
+  // Minimum 100px, maksimum 280px
+  size = Math.max(100, Math.min(size, 280));
+  
+  if (scanType === 'barcode') {
+    return { width: size, height: Math.max(60, Math.floor(size * 0.4)) };
   } else {
-    initScan();
+    return { width: size, height: Math.max(80, Math.floor(size * 0.85)) };
   }
 }
 
-function initScan() {
-  html5QrCode = new Html5Qrcode('reader');
+// Start scanner
+function startScan() {
+  document.getElementById('msg').textContent = '⏳ Meminta izin kamera...';
+  document.getElementById('msg').className = 'msg';
+  document.getElementById('errp').classList.remove('show');
+  document.getElementById('overlay').style.display = 'block';
+  paused = false;
 
-  var cfg = {
+  // Cleanup previous
+  if (scanner) {
+    try {
+      scanner.stop().then(function() {
+        try { scanner.clear(); } catch(e) {}
+        doInit();
+      }).catch(function() {
+        try { scanner.clear(); } catch(e) {}
+        doInit();
+      });
+    } catch (e) {
+      doInit();
+    }
+  } else {
+    doInit();
+  }
+}
+
+function doInit() {
+  // Clear reader div
+  var readerEl = document.getElementById('reader');
+  readerEl.innerHTML = '';
+
+  scanner = new Html5Qrcode('reader');
+
+  var config = {
     fps: 12,
-    qrbox: function (w, h) {
-      var m = Math.min(w, h);
-      var s = Math.floor(m * 0.72);
-      return { width: s, height: Math.floor(s * (scanType === 'barcode' ? 0.45 : 0.85)) };
-    },
+    qrbox: getQrBox,
     formatsToSupport: getFmts(),
-    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    },
+    // Penting: biarkan library menentukan aspect ratio
+    aspectRatio: undefined
   };
 
-  html5QrCode.start(
-    { facingMode: 'environment' }, cfg, onSuccess, function () {}
-  ).then(function () {
-    document.getElementById('msg').textContent = '📷 Arahkan kamera ke barcode / QR code...';
-    document.getElementById('errPanel').classList.remove('show');
-  }).catch(function (err) {
-    // Coba kamera depan
-    html5QrCode.start(
-      { facingMode: 'user' }, cfg, onSuccess, function () {}
-    ).then(function () {
+  // Coba kamera belakang dulu
+  scanner.start(
+    { facingMode: 'environment' },
+    config,
+    onScanOK,
+    function() {} // ignore per-frame failures
+  ).then(function() {
+    document.getElementById('msg').textContent = '📷 Arahkan ke barcode / QR code...';
+    document.getElementById('errp').classList.remove('show');
+  }).catch(function(err) {
+    // Fallback kamera depan
+    scanner.start(
+      { facingMode: 'user' },
+      config,
+      onScanOK,
+      function() {}
+    ).then(function() {
       document.getElementById('msg').textContent = '📷 Arahkan ke barcode/QR...';
-      document.getElementById('errPanel').classList.remove('show');
-    }).catch(function (err2) {
-      showErr(err2);
+      document.getElementById('errp').classList.remove('show');
+    }).catch(function(err2) {
+      showScanError(err2);
     });
   });
 }
 
-function onSuccess(text, result) {
-  if (scanPaused) return;
+function onScanOK(text, result) {
+  if (paused) return;
   if (text === lastVal) return;
   lastVal = text;
-  scanPaused = true;
+  paused = true;
 
-  beepOK(); vib();
+  beepOK();
+  vib();
 
   // Flash
   var fl = document.getElementById('flash');
-  fl.classList.remove('show'); void fl.offsetWidth; fl.classList.add('show');
-  setTimeout(function () { fl.classList.remove('show'); }, 300);
+  fl.classList.remove('show');
+  void fl.offsetWidth;
+  fl.classList.add('show');
+  setTimeout(function() { fl.classList.remove('show'); }, 300);
 
-  // Pause scanner
-  try { html5QrCode.pause(true); } catch (e) {}
+  // Pause
+  try { scanner.pause(true); } catch (e) {}
 
+  // Format
   var fmt = 'Barcode';
   try { fmt = result.result.format.formatName; } catch (e) {}
-  var typeLabel = fmt === 'QR_CODE' ? 'QR Code' : 'Barcode (' + fmt + ')';
+  var typeLabel = (fmt === 'QR_CODE') ? 'QR Code' : 'Barcode (' + fmt + ')';
 
-  document.getElementById('resVal').textContent = text;
-  document.getElementById('resType').textContent = typeLabel;
-  document.getElementById('resBox').classList.add('show');
+  document.getElementById('rVal').textContent = text;
+  document.getElementById('rTyp').textContent = typeLabel;
+  document.getElementById('resbox').classList.add('show');
   document.getElementById('btns').style.display = 'flex';
-  document.getElementById('msg').textContent = '✅ Berhasil scan!';
+  document.getElementById('msg').textContent = '✅ Berhasil!';
   document.getElementById('msg').className = 'msg ok';
   document.getElementById('overlay').style.display = 'none';
 }
 
-function showErr(err) {
+function showScanError(err) {
   var msg = err.toString();
-  var title = '❌ Kamera Tidak Bisa Diakses';
-  var desc = 'Browser memblokir atau tidak bisa mengakses kamera.';
+  var title = '❌ Kamera Error';
+  var desc = 'Tidak bisa mengakses kamera.';
   var steps = '';
 
   if (msg.indexOf('NotAllowed') >= 0 || msg.indexOf('Permission') >= 0) {
-    title = '🚫 Izin Kamera Ditolak';
-    desc = 'Anda perlu mengizinkan akses kamera untuk scan barcode.';
-    steps = '<div>1. Klik ikon 🔒 di address bar browser</div><div>2. Cari "Camera" atau "Kamera"</div><div>3. Ubah ke "Allow" / "Izinkan"</div><div>4. Klik tombol "Coba Lagi" di bawah</div>';
+    title = '🚫 Izin Ditolak';
+    desc = 'Izinkan akses kamera untuk scan.';
+    steps = '<div>1. Klik 🔒 di address bar</div>';
+    steps += '<div>2. Camera → Allow</div>';
+    steps += '<div>3. Klik "Coba Lagi"</div>';
   } else if (msg.indexOf('NotFound') >= 0) {
-    title = '📷 Kamera Tidak Ditemukan';
-    desc = 'Perangkat ini tidak memiliki kamera.';
-    steps = '<div>1. Gunakan HP yang ada kameranya</div><div>2. Atau sambungkan webcam external</div>';
+    title = '📷 Tidak Ada Kamera';
+    desc = 'Perangkat tidak punya kamera.';
+    steps = '<div>Gunakan HP yang ada kamera</div>';
   } else if (msg.indexOf('NotReadable') >= 0) {
-    title = '⚠️ Kamera Sedang Dipakai';
-    desc = 'Kamera sedang digunakan aplikasi lain.';
-    steps = '<div>1. Tutup aplikasi lain yang pakai kamera</div><div>2. Tutup tab lain yang pakai kamera</div><div>3. Klik "Coba Lagi"</div>';
+    title = '⚠️ Kamera Sibuk';
+    desc = 'Tutup app lain yang pakai kamera.';
+    steps = '<div>1. Tutup app/tab lain</div><div>2. Klik "Coba Lagi"</div>';
   } else {
-    steps = '<div>1. Pastikan browser Chrome terbaru</div><div>2. Pastikan halaman via HTTPS</div><div>3. Refresh dan coba lagi</div>';
+    steps = '<div>1. Pastikan Chrome terbaru</div><div>2. Refresh & coba lagi</div>';
   }
 
-  document.getElementById('errTitle').textContent = title;
-  document.getElementById('errDesc').textContent = desc;
-  document.getElementById('errSteps').innerHTML = steps;
-  document.getElementById('errPanel').classList.add('show');
+  document.getElementById('erT').textContent = title;
+  document.getElementById('erD').textContent = desc;
+  document.getElementById('erS').innerHTML = steps;
+  document.getElementById('errp').classList.add('show');
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('msg').textContent = '❌ Kamera error';
-  document.getElementById('msg').className = 'msg err';
+  document.getElementById('msg').className = 'msg er';
 }
 
-function retry() {
+function doRetry() {
   lastVal = '';
-  startScanner();
+  startScan();
 }
 
 function doRescan() {
   lastVal = '';
-  scanPaused = false;
-  document.getElementById('resBox').classList.remove('show');
+  paused = false;
+  document.getElementById('resbox').classList.remove('show');
   document.getElementById('btns').style.display = 'none';
   document.getElementById('msg').textContent = '📷 Arahkan ke barcode/QR...';
   document.getElementById('msg').className = 'msg';
   document.getElementById('overlay').style.display = 'block';
-  try { html5QrCode.resume(); } catch (e) { startScanner(); }
+  try { scanner.resume(); } catch (e) { startScan(); }
 }
 
-// ============================================
-// KIRIM HASIL KE GOOGLE APPS SCRIPT
-// ============================================
+// Send result
 function sendResult() {
-  var value = document.getElementById('resVal').textContent;
-  var type = document.getElementById('resType').textContent;
+  var value = document.getElementById('rVal').textContent;
+  var type = document.getElementById('rTyp').textContent;
 
-  // Method 1: postMessage ke window opener (GAS)
   if (window.opener) {
     try {
       window.opener.postMessage({
@@ -301,21 +592,21 @@ function sendResult() {
       }, '*');
       toast('✅ Kode dikirim!');
       stopAll();
-      setTimeout(function () { window.close(); }, 800);
+      setTimeout(function() { window.close(); }, 800);
       return;
     } catch (e) {}
   }
 
-  // Method 2: Copy ke clipboard
-  copyText(value);
+  // Fallback: copy
+  copyVal(value);
 }
 
-function copyText(val) {
+function copyVal(val) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(val).then(function () {
+    navigator.clipboard.writeText(val).then(function() {
       toast('📋 Disalin! Paste di form.');
-      setTimeout(function () { try { window.close(); } catch(e){} }, 1500);
-    }).catch(function () { fbCopy(val); });
+      setTimeout(function() { try { window.close(); } catch(e) {} }, 1500);
+    }).catch(function() { fbCopy(val); });
   } else {
     fbCopy(val);
   }
@@ -323,29 +614,62 @@ function copyText(val) {
 
 function fbCopy(val) {
   var ta = document.createElement('textarea');
-  ta.value = val; ta.style.cssText = 'position:fixed;opacity:0';
-  document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); toast('📋 Disalin!'); } catch (e) { toast('Kode: ' + val); }
+  ta.value = val;
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast('📋 Disalin!'); }
+  catch (e) { toast('Kode: ' + val); }
   document.body.removeChild(ta);
-  setTimeout(function () { try { window.close(); } catch(e){} }, 2000);
+  setTimeout(function() { try { window.close(); } catch(e) {} }, 2000);
 }
 
 function stopAll() {
-  scanPaused = true;
-  if (html5QrCode) {
-    try { html5QrCode.stop().then(function(){ html5QrCode.clear(); }).catch(function(){}); } catch(e){}
+  paused = true;
+  if (scanner) {
+    try { scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); }
+    catch (e) {}
   }
 }
 
 function closePage() {
   stopAll();
   try { window.close(); } catch (e) {}
-  setTimeout(function(){ window.history.back(); }, 300);
+  setTimeout(function() { window.history.back(); }, 300);
 }
 
+// Handle window resize (penting untuk responsive)
+var resizeTimer = null;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function() {
+    // Restart scanner jika sedang aktif dan belum paused
+    if (scanner && !paused) {
+      try {
+        scanner.stop().then(function() {
+          try { scanner.clear(); } catch(e) {}
+          scanner = null;
+          startScan();
+        }).catch(function() {
+          scanner = null;
+          startScan();
+        });
+      } catch (e) {
+        scanner = null;
+        startScan();
+      }
+    }
+  }, 500);
+});
+
 // Init
-window.addEventListener('load', function () { startScanner(); });
-window.addEventListener('beforeunload', function () { stopAll(); });
+window.addEventListener('load', function() {
+  startScan();
+});
+
+window.addEventListener('beforeunload', function() {
+  stopAll();
+});
 </script>
 </body>
 </html>
