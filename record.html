@@ -22,13 +22,11 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .btn{padding:12px 20px;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
 .btn:active{transform:scale(.96)}
 .btn-rec{background:#ef4444;color:#fff;min-width:140px;justify-content:center}
-.btn-rec.recording{animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
 .btn-stop{background:#f59e0b;color:#fff}
 .btn-ok{background:#10b981;color:#fff}
 .btn-no{background:#64748b;color:#fff}
 .btn-retry{background:#3b82f6;color:#fff}
-.timer{font-size:1.8rem;font-weight:700;color:#ef4444;text-align:center;margin-bottom:10px;font-variant-numeric:tabular-nums}
+.timer{font-size:1.8rem;font-weight:700;color:#ef4444;text-align:center;margin-bottom:10px}
 .rec-dot{display:inline-block;width:14px;height:14px;background:#ef4444;border-radius:50%;margin-right:8px;animation:blink 1s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 .errbox{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:10;padding:24px;text-align:center;flex-direction:column;align-items:center;justify-content:center}
@@ -74,7 +72,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
       <span class="rec-dot"></span>00:00
     </div>
     <div class="status" id="status">Memulai kamera...</div>
-    <div class="btns" id="btns">
+    <div class="btns">
       <button class="btn btn-rec" id="btnRec" onclick="doRec()" style="display:none">⏺️ Mulai Rekam</button>
       <button class="btn btn-stop" id="btnStop" onclick="doStop()" style="display:none">⏹️ Stop</button>
       <button class="btn btn-ok" id="btnSend" onclick="doSend()" style="display:none">✅ Kirim Video</button>
@@ -113,9 +111,6 @@ function fmtTime(s) {
   return m + ':' + sc;
 }
 
-// ====================================================
-// START CAMERA
-// ====================================================
 function startCam() {
   document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('errbox').classList.remove('show');
@@ -148,7 +143,6 @@ function startCam() {
     };
   })
   .catch(function(err) {
-    // Coba tanpa constraint
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     .then(function(s) {
       stream = s;
@@ -163,7 +157,6 @@ function startCam() {
       };
     })
     .catch(function(err2) {
-      // Coba video saja
       navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       .then(function(s) {
         stream = s;
@@ -199,9 +192,6 @@ function showErr(t, d) {
   setStatus('Error', 'err');
 }
 
-// ====================================================
-// RECORD
-// ====================================================
 function doRec() {
   chunks = [];
   blob = null;
@@ -241,13 +231,11 @@ function doRec() {
 
   recorder.start(1000);
 
-  // UI
   document.getElementById('btnRec').style.display = 'none';
   document.getElementById('btnStop').style.display = 'inline-flex';
   document.getElementById('btnCancel').style.display = 'none';
   setStatus('⏺️ Merekam...', '');
 
-  // Timer
   seconds = 0;
   document.getElementById('timer').style.display = 'block';
   document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>00:00';
@@ -275,9 +263,6 @@ function doRetry() {
   setStatus('Kamera siap. Klik rekam.', '');
 }
 
-// ====================================================
-// SEND VIDEO BACK TO GAS
-// ====================================================
 function doSend() {
   if (!blob) return;
 
@@ -305,12 +290,11 @@ function doSend() {
       } catch (e) {}
     }
 
-    // Fallback: download file
     var a = document.createElement('a');
     a.href = dataUrl;
     a.download = 'packing_' + Date.now() + '.webm';
     a.click();
-    showToast('📥 Video didownload. Upload manual di form.');
+    showToast('📥 Video didownload.');
     setTimeout(function() { try { window.close(); } catch(e) {} }, 2000);
   };
   reader.readAsDataURL(blob);
@@ -333,7 +317,6 @@ function doClose() {
   setTimeout(function() { window.history.back(); }, 300);
 }
 
-// Init
 window.addEventListener('load', function() { startCam(); });
 window.addEventListener('beforeunload', function() { stopCam(); });
 </script>
