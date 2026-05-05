@@ -13,10 +13,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .app{display:flex;flex-direction:column;height:100%}
 .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#1e293b;flex-shrink:0}
 .bar h1{font-size:.85rem;display:flex;align-items:center;gap:6px}
-.badge{font-size:.62rem;padding:3px 8px;border-radius:16px;font-weight:600}
-.bp{background:rgba(124,58,237,.2);color:#a78bfa}
-.br{background:rgba(16,185,129,.2);color:#6ee7b7}
-.bs{background:rgba(59,130,246,.2);color:#93c5fd}
 .xbtn{background:#ef4444;border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .xbtn:active{transform:scale(.9)}
 .cam{flex:1;position:relative;background:#000;overflow:hidden}
@@ -29,7 +25,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 #reader__dashboard span,#reader__dashboard a{color:#ccc!important;font-size:.68rem!important}
 #reader__scan_region{min-height:80px!important;overflow:hidden!important}
 #reader__scan_region img{display:none!important}
-.panel{padding:12px 14px;background:#1e293b;flex-shrink:0}
+.panel{padding:12px 14px;background:#1e293b;flex-shrink:0;max-height:50vh;overflow-y:auto}
 .status{text-align:center;font-size:.85rem;color:#94a3b8;margin-bottom:8px}
 .status.ok{color:#10b981;font-weight:600}
 .status.err{color:#ef4444;font-weight:600}
@@ -37,19 +33,16 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .result.show{display:block}
 .result .val{font-size:1.1rem;font-weight:700;color:#10b981;word-break:break-all}
 .result .typ{font-size:.7rem;color:#94a3b8;margin-top:4px}
-.btns{display:flex;gap:6px}
-.btn{flex:1;padding:12px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;text-align:center;font-family:inherit}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;text-align:center;font-family:inherit;min-width:0}
 .btn:active{transform:scale(.96)}
 .btn-ok{background:#10b981;color:#fff}
+.btn-blue{background:#3b82f6;color:#fff}
+.btn-purple{background:#7c3aed;color:#fff}
 .btn-warn{background:#f59e0b;color:#fff}
-.btn-no{background:#ef4444;color:#fff}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
+.btn-no{background:#64748b;color:#fff}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100;white-space:nowrap}
 .toast.show{display:block}
-.sent{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:30;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
-.sent.show{display:flex}
-.sent .icon{font-size:4rem;margin-bottom:16px}
-.sent .msg{font-size:1.1rem;font-weight:600;color:#10b981;margin-bottom:8px}
-.sent .sub{font-size:.85rem;color:#94a3b8}
 .loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
 .spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#10b981;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -58,22 +51,41 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .errbox .icon{font-size:3rem;margin-bottom:12px}
 .errbox .title{font-size:1rem;font-weight:700;color:#ef4444;margin-bottom:8px}
 .errbox .desc{font-size:.85rem;color:#94a3b8;margin-bottom:16px;line-height:1.6}
+.hist{margin-top:8px;max-height:120px;overflow-y:auto}
+.hist-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,.05);border-radius:6px;margin-bottom:4px;font-size:.78rem}
+.hist-item .code{color:#10b981;font-weight:600;word-break:break-all;flex:1;margin-right:8px}
+.hist-item .actions{display:flex;gap:4px;flex-shrink:0}
+.hist-item .actions button{padding:4px 8px;border:none;border-radius:4px;font-size:.7rem;font-weight:600;cursor:pointer;color:#fff}
+.target-label{font-size:.68rem;padding:2px 6px;border-radius:10px;font-weight:600;display:inline-block;margin-bottom:4px}
+.target-pesanan{background:rgba(124,58,237,.2);color:#a78bfa}
+.target-resi{background:rgba(16,185,129,.2);color:#6ee7b7}
+.sent{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:30;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.sent.show{display:flex}
+.sent .icon{font-size:4rem;margin-bottom:16px}
+.sent .msg{font-size:1.1rem;font-weight:600;color:#10b981;margin-bottom:8px}
+.sent .sub{font-size:.85rem;color:#94a3b8}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="bar">
-    <h1>📱 Scan via HP <span class="badge" id="badge">-</span></h1>
+    <h1>📱 Scan HP → PC</h1>
     <button class="xbtn" onclick="doClose()">✕</button>
   </div>
+
   <div class="cam">
     <div id="reader"></div>
     <div class="sent" id="sentScreen">
       <div class="icon">✅</div>
-      <div class="msg">Kode dikirim ke PC!</div>
+      <div class="msg" id="sentMsg">Kode dikirim ke PC!</div>
       <div class="sub" id="sentVal">-</div>
-      <br><div class="sub">Halaman ini bisa ditutup.</div><br>
-      <button class="btn btn-ok" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
+      <br>
+      <div class="sub">Scan lagi atau tutup halaman ini.</div>
+      <br>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ok" onclick="backToScan()">📷 Scan Lagi</button>
+        <button class="btn btn-no" onclick="doClose()">✕ Tutup</button>
+      </div>
     </div>
     <div class="errbox" id="errbox">
       <div class="icon">📷</div>
@@ -84,16 +96,29 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     </div>
     <div class="loading" id="loadMsg"><div class="spinner"></div><div>Memulai scanner...</div></div>
   </div>
+
   <div class="panel">
     <div class="status" id="status">Memulai...</div>
     <div class="result" id="resBox">
       <div class="typ" id="resTyp">-</div>
       <div class="val" id="resVal">-</div>
     </div>
-    <div class="btns" id="btns" style="display:none">
-      <button class="btn btn-ok" onclick="doSend()">✅ Kirim ke PC</button>
-      <button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button>
+
+    <!-- PILIH TARGET: Pesanan atau Resi -->
+    <div id="targetBtns" style="display:none">
+      <p style="text-align:center;font-size:.75rem;color:#94a3b8;margin-bottom:6px">Kirim ke:</p>
+      <div class="btns" style="margin-bottom:8px">
+        <button class="btn btn-purple" onclick="sendAs('pesanan')">📋 No. Pesanan</button>
+        <button class="btn btn-ok" onclick="sendAs('resi')">🚚 No. Resi</button>
+      </div>
+      <div class="btns">
+        <button class="btn btn-warn" onclick="doRescan()">🔄 Scan Ulang</button>
+        <button class="btn btn-no" onclick="doClose()">✕ Tutup</button>
+      </div>
     </div>
+
+    <!-- Riwayat Scan -->
+    <div class="hist" id="scanHist"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -109,19 +134,14 @@ firebase.initializeApp({
 var db = firebase.database();
 
 var params = new URLSearchParams(location.search);
-var scanTarget = params.get('target') || 'pesanan';
-var scanType = params.get('type') || 'barcode';
 var sessionId = params.get('session') || '';
-
-var bdg = document.getElementById('badge');
-if (scanTarget === 'resi') { bdg.textContent = '🚚 Resi'; bdg.className = 'badge br'; }
-else if (scanTarget === 'search') { bdg.textContent = '🔍 Cari'; bdg.className = 'badge bs'; }
-else { bdg.textContent = '📋 Pesanan'; bdg.className = 'badge bp'; }
+var defaultTarget = params.get('target') || 'pesanan';
 
 var scanner = null;
 var lastVal = '';
 var paused = false;
 var audioCtx = null;
+var scanHistory = [];
 
 function beep() {
   try {
@@ -129,12 +149,14 @@ function beep() {
     function t(f, dl, d) {
       var o = audioCtx.createOscillator();
       var g = audioCtx.createGain();
-      o.connect(g); g.connect(audioCtx.destination);
+      o.connect(g);
+      g.connect(audioCtx.destination);
       o.frequency.value = f;
       var tm = audioCtx.currentTime + dl;
       g.gain.setValueAtTime(.3, tm);
       g.gain.exponentialRampToValueAtTime(.001, tm + d);
-      o.start(tm); o.stop(tm + d);
+      o.start(tm);
+      o.stop(tm + d);
     }
     t(1200, 0, .15);
     t(1600, .18, .2);
@@ -156,7 +178,6 @@ function setStatus(m, c) {
 
 function getFmts() {
   if (typeof Html5QrcodeSupportedFormats === 'undefined') return undefined;
-  if (scanType === 'qrcode') return [Html5QrcodeSupportedFormats.QR_CODE];
   return [
     Html5QrcodeSupportedFormats.QR_CODE,
     Html5QrcodeSupportedFormats.CODE_128,
@@ -171,19 +192,20 @@ function getFmts() {
   ];
 }
 
+// START SCAN
 function startScan() {
   document.getElementById('errbox').classList.remove('show');
   document.getElementById('sentScreen').classList.remove('show');
   document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('resBox').classList.remove('show');
-  document.getElementById('btns').style.display = 'none';
+  document.getElementById('targetBtns').style.display = 'none';
   paused = false;
   lastVal = '';
 
   if (typeof Html5Qrcode === 'undefined') {
     document.getElementById('loadMsg').style.display = 'none';
     document.getElementById('errT').textContent = '📦 Library Error';
-    document.getElementById('errD').textContent = 'Scanner library gagal dimuat.';
+    document.getElementById('errD').textContent = 'Scanner gagal dimuat.';
     document.getElementById('errbox').classList.add('show');
     return;
   }
@@ -213,8 +235,7 @@ function doInit() {
       var m = Math.min(vw, vh);
       var s = Math.floor(m * 0.75);
       s = Math.max(120, Math.min(s, 350));
-      if (scanType === 'barcode') return { width: s, height: Math.max(80, Math.floor(s * .4)) };
-      return { width: s, height: Math.max(100, Math.floor(s * .85)) };
+      return { width: s, height: Math.max(80, Math.floor(s * 0.45)) };
     },
     formatsToSupport: getFmts(),
     experimentalFeatures: { useBarCodeDetectorIfSupported: true }
@@ -244,6 +265,7 @@ function onOK(text, result) {
   if (text === lastVal) return;
   lastVal = text;
   paused = true;
+
   beep();
   try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch (e) {}
   try { scanner.pause(true); } catch (e) {}
@@ -255,18 +277,22 @@ function onOK(text, result) {
   document.getElementById('resVal').textContent = text;
   document.getElementById('resTyp').textContent = typeLabel;
   document.getElementById('resBox').classList.add('show');
-  document.getElementById('btns').style.display = 'flex';
-  setStatus('✅ Berhasil!', 'ok');
+  document.getElementById('targetBtns').style.display = 'block';
+  setStatus('✅ Berhasil! Pilih tujuan kirim:', 'ok');
+
+  // Simpan ke history
+  addToHistory(text, typeLabel);
 }
 
-function doSend() {
+// KIRIM KE PC
+function sendAs(target) {
   var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resTyp').textContent;
 
-  setStatus('⏳ Mengirim...', '');
+  setStatus('⏳ Mengirim sebagai ' + (target === 'pesanan' ? 'No. Pesanan' : 'No. Resi') + '...', '');
 
   db.ref('scans/' + sessionId).set({
-    target: scanTarget,
+    target: target,
     value: value,
     type: type,
     time: Date.now()
@@ -275,24 +301,87 @@ function doSend() {
       db.ref('scans/' + sessionId).remove();
     }, 30000);
 
+    var targetLabel = (target === 'pesanan') ? '📋 No. Pesanan' : '🚚 No. Resi';
+    document.getElementById('sentMsg').textContent = 'Dikirim sebagai ' + targetLabel + '!';
     document.getElementById('sentVal').textContent = value + ' (' + type + ')';
     document.getElementById('sentScreen').classList.add('show');
     setStatus('✅ Dikirim!', 'ok');
-    showToast('✅ Kode dikirim ke PC!');
-
-    try { scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); } catch (e) {}
+    showToast('✅ Dikirim ke PC!');
   }).catch(function(err) {
     setStatus('❌ Gagal: ' + err.message, 'err');
   });
 }
 
+// KIRIM DARI HISTORY
+function sendHistAs(value, type, target) {
+  setStatus('⏳ Mengirim...', '');
+
+  db.ref('scans/' + sessionId).set({
+    target: target,
+    value: value,
+    type: type,
+    time: Date.now()
+  }).then(function() {
+    setTimeout(function() {
+      db.ref('scans/' + sessionId).remove();
+    }, 30000);
+
+    var targetLabel = (target === 'pesanan') ? '📋 Pesanan' : '🚚 Resi';
+    showToast('✅ ' + value + ' → ' + targetLabel);
+    setStatus('✅ Dikirim: ' + value, 'ok');
+  }).catch(function(err) {
+    setStatus('❌ Gagal: ' + err.message, 'err');
+  });
+}
+
+// SCAN HISTORY
+function addToHistory(value, type) {
+  // Cek duplikat
+  for (var i = 0; i < scanHistory.length; i++) {
+    if (scanHistory[i].value === value) return;
+  }
+  scanHistory.unshift({ value: value, type: type, time: new Date().toLocaleTimeString('id-ID') });
+  if (scanHistory.length > 10) scanHistory = scanHistory.slice(0, 10);
+  renderHistory();
+}
+
+function renderHistory() {
+  var el = document.getElementById('scanHist');
+  if (scanHistory.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  var html = '<p style="font-size:.7rem;color:#64748b;margin-bottom:4px">📋 Riwayat scan (klik untuk kirim ulang):</p>';
+  for (var i = 0; i < scanHistory.length; i++) {
+    var item = scanHistory[i];
+    var safeVal = item.value.replace(/'/g, "\\'");
+    var safeType = item.type.replace(/'/g, "\\'");
+
+    html += '<div class="hist-item">';
+    html += '<div class="code">' + item.value + '</div>';
+    html += '<div class="actions">';
+    html += '<button style="background:#7c3aed" onclick="sendHistAs(\'' + safeVal + '\',\'' + safeType + '\',\'pesanan\')">📋</button>';
+    html += '<button style="background:#10b981" onclick="sendHistAs(\'' + safeVal + '\',\'' + safeType + '\',\'resi\')">🚚</button>';
+    html += '</div>';
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+// RESCAN
 function doRescan() {
   lastVal = '';
   paused = false;
   document.getElementById('resBox').classList.remove('show');
-  document.getElementById('btns').style.display = 'none';
+  document.getElementById('targetBtns').style.display = 'none';
   setStatus('📷 Arahkan ke barcode/QR...', '');
   try { scanner.resume(); } catch (e) { startScan(); }
+}
+
+function backToScan() {
+  document.getElementById('sentScreen').classList.remove('show');
+  doRescan();
 }
 
 function doClose() {
