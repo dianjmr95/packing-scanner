@@ -207,43 +207,66 @@ function doSend() {
   if (!blob) return;
 
   document.getElementById('btnSend').disabled = true;
-  document.getElementById('btnSend').textContent = '⏳ Mengirim...';
-  document.getElementById('btnRetry').style.display = 'none';
-  setStatus('⏳ Mengirim video...', '');
+  document.getElementById('btnSend').textContent = '⏳ Menyimpan...';
+  setStatus('⏳ Menyimpan video...', '');
 
-  // Baca sebagai dataUrl
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var dataUrl = e.target.result;
-
-    if (!window.opener) {
-      showToast('⚠️ Tidak bisa kirim. Tutup dan coba lagi.');
-      document.getElementById('btnSend').disabled = false;
-      document.getElementById('btnSend').textContent = '✅ Kirim';
-      document.getElementById('btnRetry').style.display = 'inline-flex';
-      return;
-    }
-
-    // Kirim via postMessage
+  // Coba postMessage dulu (mungkin jalan di beberapa browser)
+  if (window.opener) {
     try {
-      window.opener.postMessage({
-        source: 'packing-recorder',
-        action: 'video-result',
-        dataUrl: dataUrl,
-        size: blob.size,
-        type: blob.type
-      }, '*');
-      showToast('✅ Video dikirim!');
-      stopCam();
-      setTimeout(function() { window.close(); }, 800);
-    } catch (err) {
-      setStatus('❌ Video terlalu besar. Rekam lebih singkat.', 'err');
-      document.getElementById('btnSend').disabled = false;
-      document.getElementById('btnSend').textContent = '✅ Kirim';
-      document.getElementById('btnRetry').style.display = 'inline-flex';
-    }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          window.opener.postMessage({
+            source: 'packing-recorder',
+            action: 'video-result',
+            dataUrl: e.target.result,
+            size: blob.size,
+            type: blob.type
+          }, '*');
+          showToast('✅ Video dikirim!');
+          stopCam();
+          setTimeout(function() { window.close(); }, 800);
+        } catch (err) {
+          // postMessage gagal, fallback ke download
+          downloadAndClose();
+        }
+      };
+      reader.readAsDataURL(blob);
+      return;
+    } catch (e) {}
+  }
+
+  // Fallback: download
+  downloadAndClose();
+}
+
+function downloadAndClose() {
+  var fileName = 'packing_video_' + Date.now() + '.webm';
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+
+  setStatus('✅ Video tersimpan! Klik "Pilih File" di form utama.', 'ok');
+  showToast('📥 Video didownload: ' + fileName);
+
+  document.getElementById('btnSend').disabled = false;
+  document.getElementById('btnSend').textContent = '✅ Tersimpan';
+  document.getElementById('btnSend').style.display = 'none';
+  document.getElementById('btnRetry').style.display = 'none';
+
+  // Tampilkan instruksi
+  var btnsEl = document.querySelector('.btns');
+  var infoBtn = document.createElement('button');
+  infoBtn.className = 'btn btn-ok';
+  infoBtn.textContent = '👍 OK, Tutup';
+  infoBtn.onclick = function() {
+    stopCam();
+    try { window.close(); } catch (e) {}
   };
-  reader.readAsDataURL(blob);
+  btnsEl.innerHTML = '';
+  btnsEl.appendChild(infoBtn);
 }
 
 function stopCam() {
