@@ -39,6 +39,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
 .toast.show{display:block}
+.tip{text-align:center;font-size:.72rem;color:#64748b;margin-top:6px}
 </style>
 </head>
 <body>
@@ -60,6 +61,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
       <button class="btn btn-retry" id="btnRetry" onclick="doRetry()" style="display:none">🔄 Ulang</button>
       <button class="btn btn-no" id="btnCancel" onclick="doClose()">✕ Batal</button>
     </div>
+    <div class="tip">💡 Rekam max 15 detik agar cepat terkirim</div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -70,6 +72,7 @@ var chunks = [];
 var blob = null;
 var timerInterval = null;
 var seconds = 0;
+var MAX_SECONDS = 30;
 
 function showToast(m) {
   var t = document.getElementById('toast');
@@ -94,7 +97,7 @@ function startCam() {
   document.getElementById('playVid').style.display = 'none';
 
   navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
     audio: true
   }).then(function(s) {
     onCamOK(s);
@@ -107,7 +110,7 @@ function startCam() {
       }).catch(function(err) {
         document.getElementById('loadMsg').style.display = 'none';
         document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
-        document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🔒 → Camera → Allow' : err.toString();
+        document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : err.toString();
         document.getElementById('errbox').classList.add('show');
       });
     });
@@ -130,21 +133,35 @@ function onCamOK(s) {
 function doRec() {
   chunks = [];
   blob = null;
-  var mt = 'video/webm;codecs=vp9,opus';
-  if (!MediaRecorder.isTypeSupported(mt)) mt = 'video/webm;codecs=vp8,opus';
-  if (!MediaRecorder.isTypeSupported(mt)) mt = 'video/webm';
-  if (!MediaRecorder.isTypeSupported(mt)) mt = 'video/mp4';
-  try { recorder = new MediaRecorder(stream, { mimeType: mt }); }
-  catch (e) { recorder = new MediaRecorder(stream); }
 
-  recorder.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  // Gunakan bitrate rendah agar file kecil
+  var options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 500000 };
+  if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+    options = { mimeType: 'video/webm', videoBitsPerSecond: 500000 };
+  }
+  if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+    options = { mimeType: 'video/mp4', videoBitsPerSecond: 500000 };
+  }
+
+  try {
+    recorder = new MediaRecorder(stream, options);
+  } catch (e) {
+    try { recorder = new MediaRecorder(stream, { videoBitsPerSecond: 500000 }); }
+    catch (e2) { recorder = new MediaRecorder(stream); }
+  }
+
+  recorder.ondataavailable = function(e) {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
   recorder.onstop = function() {
     blob = new Blob(chunks, { type: recorder.mimeType });
     document.getElementById('playVid').src = URL.createObjectURL(blob);
     document.getElementById('playVid').style.display = 'block';
     document.getElementById('liveVid').style.display = 'none';
     clearInterval(timerInterval);
-    setStatus('✅ ' + (blob.size / 1048576).toFixed(2) + ' MB | ' + fmtTime(seconds), 'ok');
+    var sz = (blob.size / 1048576).toFixed(2);
+    setStatus('✅ ' + sz + ' MB | ' + fmtTime(seconds), 'ok');
     document.getElementById('btnStop').style.display = 'none';
     document.getElementById('btnSend').style.display = 'inline-flex';
     document.getElementById('btnRetry').style.display = 'inline-flex';
@@ -162,6 +179,11 @@ function doRec() {
   timerInterval = setInterval(function() {
     seconds++;
     document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>' + fmtTime(seconds);
+    // Auto stop jika terlalu lama
+    if (seconds >= MAX_SECONDS) {
+      doStop();
+      showToast('⏹️ Auto stop: max ' + MAX_SECONDS + ' detik');
+    }
   }, 1000);
 }
 
@@ -183,100 +205,45 @@ function doRetry() {
 
 function doSend() {
   if (!blob) return;
-  document.getElementById('btnSend').disabled = true;
-  document.getElementById('btnSend').textContent = '⏳ Memproses...';
-  document.getElementById('btnRetry').style.display = 'none';
-  setStatus('⏳ Mengkonversi video...', '');
 
+  document.getElementById('btnSend').disabled = true;
+  document.getElementById('btnSend').textContent = '⏳ Mengirim...';
+  document.getElementById('btnRetry').style.display = 'none';
+  setStatus('⏳ Mengirim video...', '');
+
+  // Baca sebagai dataUrl
   var reader = new FileReader();
   reader.onload = function(e) {
     var dataUrl = e.target.result;
-    var maxDirect = 4 * 1024 * 1024;
 
     if (!window.opener) {
-      showToast('⚠️ Tidak bisa kirim');
+      showToast('⚠️ Tidak bisa kirim. Tutup dan coba lagi.');
       document.getElementById('btnSend').disabled = false;
       document.getElementById('btnSend').textContent = '✅ Kirim';
       document.getElementById('btnRetry').style.display = 'inline-flex';
       return;
     }
 
-    if (dataUrl.length <= maxDirect) {
-      // Kirim langsung
-      setStatus('⏳ Mengirim...', '');
-      try {
-        window.opener.postMessage({
-          source: 'packing-recorder',
-          action: 'video-result',
-          dataUrl: dataUrl,
-          size: blob.size,
-          type: blob.type
-        }, '*');
-        showToast('✅ Video dikirim!');
-        stopCam();
-        setTimeout(function() { window.close(); }, 800);
-      } catch (err) {
-        sendChunked(dataUrl);
-      }
-    } else {
-      sendChunked(dataUrl);
-    }
-  };
-  reader.readAsDataURL(blob);
-}
-
-function sendChunked(dataUrl) {
-  setStatus('⏳ Mengirim (chunks)...', '');
-  var chunkSize = 1024 * 1024;
-  var totalChunks = Math.ceil(dataUrl.length / chunkSize);
-
-  try {
-    window.opener.postMessage({
-      source: 'packing-recorder',
-      action: 'video-chunk-start',
-      totalChunks: totalChunks,
-      size: blob.size,
-      type: blob.type
-    }, '*');
-  } catch (err) {
-    showToast('⚠️ Gagal kirim');
-    document.getElementById('btnSend').disabled = false;
-    document.getElementById('btnSend').textContent = '✅ Kirim';
-    document.getElementById('btnRetry').style.display = 'inline-flex';
-    return;
-  }
-
-  var sent = 0;
-  function sendNext() {
-    if (sent >= totalChunks) {
-      try {
-        window.opener.postMessage({ source: 'packing-recorder', action: 'video-chunk-end' }, '*');
-      } catch (err) {}
-      showToast('✅ Video dikirim!');
-      stopCam();
-      setTimeout(function() { window.close(); }, 800);
-      return;
-    }
-    var start = sent * chunkSize;
-    var end = Math.min(start + chunkSize, dataUrl.length);
-    setStatus('⏳ Chunk ' + (sent + 1) + '/' + totalChunks, '');
+    // Kirim via postMessage
     try {
       window.opener.postMessage({
         source: 'packing-recorder',
-        action: 'video-chunk-data',
-        index: sent,
-        chunk: dataUrl.substring(start, end)
+        action: 'video-result',
+        dataUrl: dataUrl,
+        size: blob.size,
+        type: blob.type
       }, '*');
-      sent++;
-      setTimeout(sendNext, 50);
+      showToast('✅ Video dikirim!');
+      stopCam();
+      setTimeout(function() { window.close(); }, 800);
     } catch (err) {
-      showToast('⚠️ Gagal chunk ' + (sent + 1));
+      setStatus('❌ Video terlalu besar. Rekam lebih singkat.', 'err');
       document.getElementById('btnSend').disabled = false;
       document.getElementById('btnSend').textContent = '✅ Kirim';
       document.getElementById('btnRetry').style.display = 'inline-flex';
     }
-  }
-  sendNext();
+  };
+  reader.readAsDataURL(blob);
 }
 
 function stopCam() {
