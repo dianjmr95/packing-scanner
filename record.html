@@ -64,117 +64,235 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 </div>
 <div class="toast" id="toast"></div>
 <script>
-var stream=null,recorder=null,chunks=[],blob=null,timerInterval=null,seconds=0;
-function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},3000)}
-function setStatus(m,c){document.getElementById('status').textContent=m;document.getElementById('status').className='status'+(c?' '+c:'')}
-function fmtTime(s){return Math.floor(s/60).toString().padStart(2,'0')+':'+(s%60).toString().padStart(2,'0')}
+var stream = null;
+var recorder = null;
+var chunks = [];
+var blob = null;
+var timerInterval = null;
+var seconds = 0;
 
-function startCam(){
-  document.getElementById('loadMsg').style.display='flex';
+function showToast(m) {
+  var t = document.getElementById('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function setStatus(m, c) {
+  document.getElementById('status').textContent = m;
+  document.getElementById('status').className = 'status' + (c ? ' ' + c : '');
+}
+
+function fmtTime(s) {
+  return Math.floor(s / 60).toString().padStart(2, '0') + ':' + (s % 60).toString().padStart(2, '0');
+}
+
+function startCam() {
+  document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('errbox').classList.remove('show');
-  document.getElementById('liveVid').style.display='none';
-  document.getElementById('playVid').style.display='none';
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:true})
-  .then(function(s){onCamOK(s)})
-  .catch(function(){
-    navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(function(s){onCamOK(s)})
-    .catch(function(){
-      navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(function(s){onCamOK(s)})
-      .catch(function(err){
-        document.getElementById('loadMsg').style.display='none';
-        document.getElementById('errT').textContent=err.toString().indexOf('NotAllowed')>=0?'🚫 Izin Ditolak':'❌ Error';
-        document.getElementById('errD').textContent=err.toString().indexOf('NotAllowed')>=0?'🔒 → Camera → Allow':err.toString();
+  document.getElementById('liveVid').style.display = 'none';
+  document.getElementById('playVid').style.display = 'none';
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: true
+  }).then(function(s) {
+    onCamOK(s);
+  }).catch(function() {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(function(s) {
+      onCamOK(s);
+    }).catch(function() {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(function(s) {
+        onCamOK(s);
+      }).catch(function(err) {
+        document.getElementById('loadMsg').style.display = 'none';
+        document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
+        document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🔒 → Camera → Allow' : err.toString();
         document.getElementById('errbox').classList.add('show');
       });
     });
   });
 }
 
-function onCamOK(s){
-  stream=s;var vid=document.getElementById('liveVid');vid.srcObject=s;vid.style.display='block';
-  document.getElementById('loadMsg').style.display='none';
-  vid.onloadedmetadata=function(){vid.play();setStatus('Kamera siap. Klik rekam.','');document.getElementById('btnRec').style.display='inline-flex'};
-}
-
-function doRec(){
-  chunks=[];blob=null;
-  var mt='video/webm;codecs=vp9,opus';
-  if(!MediaRecorder.isTypeSupported(mt))mt='video/webm;codecs=vp8,opus';
-  if(!MediaRecorder.isTypeSupported(mt))mt='video/webm';
-  if(!MediaRecorder.isTypeSupported(mt))mt='video/mp4';
-  try{recorder=new MediaRecorder(stream,{mimeType:mt})}catch(e){recorder=new MediaRecorder(stream)}
-  recorder.ondataavailable=function(e){if(e.data&&e.data.size>0)chunks.push(e.data)};
-  recorder.onstop=function(){
-    blob=new Blob(chunks,{type:recorder.mimeType});
-    document.getElementById('playVid').src=URL.createObjectURL(blob);
-    document.getElementById('playVid').style.display='block';
-    document.getElementById('liveVid').style.display='none';
-    clearInterval(timerInterval);
-    setStatus('✅ '+(blob.size/1048576).toFixed(2)+' MB | '+fmtTime(seconds),'ok');
-    document.getElementById('btnStop').style.display='none';
-    document.getElementById('btnSend').style.display='inline-flex';
-    document.getElementById('btnRetry').style.display='inline-flex';
-    document.getElementById('timer').style.display='none';
+function onCamOK(s) {
+  stream = s;
+  var vid = document.getElementById('liveVid');
+  vid.srcObject = s;
+  vid.style.display = 'block';
+  document.getElementById('loadMsg').style.display = 'none';
+  vid.onloadedmetadata = function() {
+    vid.play();
+    setStatus('Kamera siap. Klik rekam.', '');
+    document.getElementById('btnRec').style.display = 'inline-flex';
   };
+}
+
+function doRec() {
+  chunks = [];
+  blob = null;
+  var mt = 'video/webm;codecs=vp9,opus';
+  if (!MediaRecorder.isTypeSupported(mt)) mt = 'video/webm;codecs=vp8,opus';
+  if (!MediaRecorder.isTypeSupported(mt)) mt = 'video/webm';
+  if (!MediaRecorder.isTypeSupported(mt)) mt = 'video/mp4';
+  try { recorder = new MediaRecorder(stream, { mimeType: mt }); }
+  catch (e) { recorder = new MediaRecorder(stream); }
+
+  recorder.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  recorder.onstop = function() {
+    blob = new Blob(chunks, { type: recorder.mimeType });
+    document.getElementById('playVid').src = URL.createObjectURL(blob);
+    document.getElementById('playVid').style.display = 'block';
+    document.getElementById('liveVid').style.display = 'none';
+    clearInterval(timerInterval);
+    setStatus('✅ ' + (blob.size / 1048576).toFixed(2) + ' MB | ' + fmtTime(seconds), 'ok');
+    document.getElementById('btnStop').style.display = 'none';
+    document.getElementById('btnSend').style.display = 'inline-flex';
+    document.getElementById('btnRetry').style.display = 'inline-flex';
+    document.getElementById('timer').style.display = 'none';
+  };
+
   recorder.start(1000);
-  document.getElementById('btnRec').style.display='none';
-  document.getElementById('btnStop').style.display='inline-flex';
-  document.getElementById('btnCancel').style.display='none';
-  setStatus('⏺️ Merekam...','');
-  seconds=0;
-  document.getElementById('timer').style.display='block';
-  document.getElementById('timer').innerHTML='<span class="rec-dot"></span>00:00';
-  timerInterval=setInterval(function(){seconds++;document.getElementById('timer').innerHTML='<span class="rec-dot"></span>'+fmtTime(seconds)},1000);
+  document.getElementById('btnRec').style.display = 'none';
+  document.getElementById('btnStop').style.display = 'inline-flex';
+  document.getElementById('btnCancel').style.display = 'none';
+  setStatus('⏺️ Merekam...', '');
+  seconds = 0;
+  document.getElementById('timer').style.display = 'block';
+  document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>00:00';
+  timerInterval = setInterval(function() {
+    seconds++;
+    document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>' + fmtTime(seconds);
+  }, 1000);
 }
 
-function doStop(){if(recorder&&recorder.state!=='inactive')recorder.stop()}
-
-function doRetry(){
-  blob=null;chunks=[];
-  document.getElementById('playVid').style.display='none';
-  document.getElementById('liveVid').style.display='block';
-  document.getElementById('btnSend').style.display='none';
-  document.getElementById('btnRetry').style.display='none';
-  document.getElementById('btnRec').style.display='inline-flex';
-  document.getElementById('btnCancel').style.display='inline-flex';
-  setStatus('Kamera siap.','');
+function doStop() {
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
 }
 
-function doSend(){
-  if(!blob)return;
-  document.getElementById('btnSend').disabled=true;
-  document.getElementById('btnSend').textContent='⏳ Mengirim...';
-  setStatus('⏳ Mengkonversi...','');
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var dataUrl=e.target.result;
-    // Coba postMessage
-    if(window.opener){
-      try{
-        window.opener.postMessage({source:'packing-recorder',action:'video-result',dataUrl:dataUrl,size:blob.size,type:blob.type},'*');
+function doRetry() {
+  blob = null;
+  chunks = [];
+  document.getElementById('playVid').style.display = 'none';
+  document.getElementById('liveVid').style.display = 'block';
+  document.getElementById('btnSend').style.display = 'none';
+  document.getElementById('btnRetry').style.display = 'none';
+  document.getElementById('btnRec').style.display = 'inline-flex';
+  document.getElementById('btnCancel').style.display = 'inline-flex';
+  setStatus('Kamera siap.', '');
+}
+
+function doSend() {
+  if (!blob) return;
+  document.getElementById('btnSend').disabled = true;
+  document.getElementById('btnSend').textContent = '⏳ Memproses...';
+  document.getElementById('btnRetry').style.display = 'none';
+  setStatus('⏳ Mengkonversi video...', '');
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+    var maxDirect = 4 * 1024 * 1024;
+
+    if (!window.opener) {
+      showToast('⚠️ Tidak bisa kirim');
+      document.getElementById('btnSend').disabled = false;
+      document.getElementById('btnSend').textContent = '✅ Kirim';
+      document.getElementById('btnRetry').style.display = 'inline-flex';
+      return;
+    }
+
+    if (dataUrl.length <= maxDirect) {
+      // Kirim langsung
+      setStatus('⏳ Mengirim...', '');
+      try {
+        window.opener.postMessage({
+          source: 'packing-recorder',
+          action: 'video-result',
+          dataUrl: dataUrl,
+          size: blob.size,
+          type: blob.type
+        }, '*');
         showToast('✅ Video dikirim!');
         stopCam();
-        setTimeout(function(){window.close()},800);
-        return;
-      }catch(err){}
+        setTimeout(function() { window.close(); }, 800);
+      } catch (err) {
+        sendChunked(dataUrl);
+      }
+    } else {
+      sendChunked(dataUrl);
     }
-    // Fallback: download
-    var a=document.createElement('a');a.href=dataUrl;a.download='packing_'+Date.now()+'.webm';a.click();
-    showToast('📥 Video didownload.');
-    setTimeout(function(){try{window.close()}catch(e){}},2000);
   };
   reader.readAsDataURL(blob);
 }
 
-function stopCam(){
-  if(timerInterval)clearInterval(timerInterval);
-  if(recorder&&recorder.state!=='inactive')try{recorder.stop()}catch(e){}
-  if(stream){try{stream.getTracks().forEach(function(t){t.stop()})}catch(e){}stream=null}
+function sendChunked(dataUrl) {
+  setStatus('⏳ Mengirim (chunks)...', '');
+  var chunkSize = 1024 * 1024;
+  var totalChunks = Math.ceil(dataUrl.length / chunkSize);
+
+  try {
+    window.opener.postMessage({
+      source: 'packing-recorder',
+      action: 'video-chunk-start',
+      totalChunks: totalChunks,
+      size: blob.size,
+      type: blob.type
+    }, '*');
+  } catch (err) {
+    showToast('⚠️ Gagal kirim');
+    document.getElementById('btnSend').disabled = false;
+    document.getElementById('btnSend').textContent = '✅ Kirim';
+    document.getElementById('btnRetry').style.display = 'inline-flex';
+    return;
+  }
+
+  var sent = 0;
+  function sendNext() {
+    if (sent >= totalChunks) {
+      try {
+        window.opener.postMessage({ source: 'packing-recorder', action: 'video-chunk-end' }, '*');
+      } catch (err) {}
+      showToast('✅ Video dikirim!');
+      stopCam();
+      setTimeout(function() { window.close(); }, 800);
+      return;
+    }
+    var start = sent * chunkSize;
+    var end = Math.min(start + chunkSize, dataUrl.length);
+    setStatus('⏳ Chunk ' + (sent + 1) + '/' + totalChunks, '');
+    try {
+      window.opener.postMessage({
+        source: 'packing-recorder',
+        action: 'video-chunk-data',
+        index: sent,
+        chunk: dataUrl.substring(start, end)
+      }, '*');
+      sent++;
+      setTimeout(sendNext, 50);
+    } catch (err) {
+      showToast('⚠️ Gagal chunk ' + (sent + 1));
+      document.getElementById('btnSend').disabled = false;
+      document.getElementById('btnSend').textContent = '✅ Kirim';
+      document.getElementById('btnRetry').style.display = 'inline-flex';
+    }
+  }
+  sendNext();
 }
 
-function doClose(){stopCam();try{window.close()}catch(e){}setTimeout(function(){window.history.back()},300)}
-window.addEventListener('load',function(){startCam()});
-window.addEventListener('beforeunload',function(){stopCam()});
+function stopCam() {
+  if (timerInterval) clearInterval(timerInterval);
+  if (recorder && recorder.state !== 'inactive') try { recorder.stop(); } catch (e) {}
+  if (stream) { try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {} stream = null; }
+}
+
+function doClose() {
+  stopCam();
+  try { window.close(); } catch (e) {}
+  setTimeout(function() { window.history.back(); }, 300);
+}
+
+window.addEventListener('load', function() { startCam(); });
+window.addEventListener('beforeunload', function() { stopCam(); });
 </script>
 </body>
 </html>
