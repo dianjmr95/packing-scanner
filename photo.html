@@ -14,30 +14,26 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 .xbtn:active{transform:scale(.9)}
 .cam{flex:1;position:relative;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .cam video{width:100%;height:100%;object-fit:cover}
-.cam canvas{display:none}
-.preview-img{max-width:100%;max-height:100%;object-fit:contain;display:none}
 .panel{padding:12px 14px;background:#1e293b;flex-shrink:0}
 .status{text-align:center;font-size:.85rem;color:#94a3b8;margin-bottom:10px}
 .status.ok{color:#10b981;font-weight:600}
-.status.err{color:#ef4444;font-weight:600}
 .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .btn{padding:12px 20px;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
 .btn:active{transform:scale(.96)}
 .btn-capture{background:#3b82f6;color:#fff;min-width:140px;justify-content:center}
 .btn-ok{background:#10b981;color:#fff}
-.btn-retry{background:#f59e0b;color:#fff}
 .btn-no{background:#64748b;color:#fff}
 .photo-count{text-align:center;font-size:.82rem;color:#10b981;font-weight:600;margin-bottom:8px}
 .thumb-row{display:flex;gap:6px;overflow-x:auto;padding:4px 0;margin-bottom:8px}
 .thumb{width:50px;height:50px;border-radius:6px;object-fit:cover;border:2px solid #334155;flex-shrink:0}
+.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
+.spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .errbox{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:10;padding:24px;text-align:center;flex-direction:column;align-items:center;justify-content:center}
 .errbox.show{display:flex}
 .errbox .icon{font-size:3rem;margin-bottom:12px}
 .errbox .title{font-size:1rem;font-weight:700;color:#ef4444;margin-bottom:8px}
-.errbox .desc{font-size:.85rem;color:#94a3b8;margin-bottom:16px;line-height:1.6}
-.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
-.spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+.errbox .desc{font-size:.85rem;color:#94a3b8;margin-bottom:16px}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
 .toast.show{display:block}
 .shutter{position:absolute;top:0;left:0;right:0;bottom:0;background:#fff;display:none;z-index:5}
@@ -47,237 +43,39 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 </head>
 <body>
 <div class="app">
-  <div class="bar">
-    <h1>📸 Ambil Foto</h1>
-    <button class="xbtn" onclick="doClose()">✕</button>
-  </div>
-
-  <div class="cam" id="camArea">
+  <div class="bar"><h1>📸 Ambil Foto</h1><button class="xbtn" onclick="doClose()">✕</button></div>
+  <div class="cam">
     <video id="vid" autoplay muted playsinline></video>
-    <canvas id="canvas"></canvas>
-    <img id="previewImg" class="preview-img">
+    <canvas id="canvas" style="display:none"></canvas>
     <div class="shutter" id="shutter"></div>
-
-    <div class="errbox" id="errbox">
-      <div class="icon">📷</div>
-      <div class="title" id="errT">Kamera Error</div>
-      <div class="desc" id="errD">Tidak bisa akses kamera</div>
-      <button class="btn btn-capture" onclick="startCam()">🔄 Coba Lagi</button>
-      <br><br>
-      <button class="btn btn-no" onclick="doClose()">✕ Tutup</button>
-    </div>
-
-    <div class="loading" id="loadMsg">
-      <div class="spinner"></div>
-      <div>Meminta izin kamera...</div>
-    </div>
+    <div class="errbox" id="errbox"><div class="icon">📷</div><div class="title" id="errT">Error</div><div class="desc" id="errD">-</div><button class="btn btn-capture" onclick="startCam()">🔄 Coba Lagi</button><br><br><button class="btn btn-no" onclick="doClose()">✕ Tutup</button></div>
+    <div class="loading" id="loadMsg"><div class="spinner"></div><div>Meminta izin kamera...</div></div>
   </div>
-
   <div class="panel">
     <div class="photo-count" id="photoCount"></div>
     <div class="thumb-row" id="thumbRow"></div>
     <div class="status" id="status">Memulai kamera...</div>
     <div class="btns">
       <button class="btn btn-capture" id="btnCapture" onclick="doCapture()" style="display:none">📸 Ambil Foto</button>
-      <button class="btn btn-ok" id="btnSend" onclick="doSend()" style="display:none">✅ Kirim Semua</button>
-      <button class="btn btn-no" id="btnClose" onclick="doClose()">✕ Tutup</button>
+      <button class="btn btn-ok" id="btnSend" onclick="doSend()" style="display:none">✅ Kirim</button>
+      <button class="btn btn-no" onclick="doClose()">✕ Tutup</button>
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
-
 <script>
-var stream = null;
-var video = document.getElementById('vid');
-var canvas = document.getElementById('canvas');
-var ctx = null;
-var capturedPhotos = []; // array of dataUrl
-
-function showToast(m) {
-  var t = document.getElementById('toast');
-  t.textContent = m; t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 3000);
-}
-
-function setStatus(m, c) {
-  var el = document.getElementById('status');
-  el.textContent = m;
-  el.className = 'status' + (c ? ' ' + c : '');
-}
-
-function updateCount() {
-  var el = document.getElementById('photoCount');
-  if (capturedPhotos.length === 0) { el.textContent = ''; }
-  else { el.textContent = '📸 ' + capturedPhotos.length + ' foto diambil'; }
-
-  // Thumbnails
-  var row = document.getElementById('thumbRow');
-  var html = '';
-  for (var i = 0; i < capturedPhotos.length; i++) {
-    html += '<img src="' + capturedPhotos[i] + '" class="thumb">';
-  }
-  row.innerHTML = html;
-
-  // Show send button
-  document.getElementById('btnSend').style.display = capturedPhotos.length > 0 ? 'inline-flex' : 'none';
-}
-
-// ====================================================
-// START CAMERA
-// ====================================================
-function startCam() {
-  document.getElementById('loadMsg').style.display = 'flex';
-  document.getElementById('errbox').classList.remove('show');
-  video.style.display = 'none';
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showErr('Browser Tidak Support', 'Gunakan Chrome terbaru.');
-    return;
-  }
-
-  navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: { ideal: 'environment' },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
-    },
-    audio: false
-  })
-  .then(function(s) { onCamOK(s); })
-  .catch(function(err) {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-    .then(function(s) { onCamOK(s); })
-    .catch(function(err2) {
-      var msg = err.toString();
-      if (msg.indexOf('NotAllowed') >= 0) showErr('🚫 Izin Ditolak', 'Klik 🔒 → Camera → Allow → Coba Lagi');
-      else if (msg.indexOf('NotFound') >= 0) showErr('📷 Tidak Ada Kamera', 'Perangkat tidak punya kamera.');
-      else showErr('❌ Error', msg);
-    });
-  });
-}
-
-function onCamOK(s) {
-  stream = s;
-  video.srcObject = s;
-  video.style.display = 'block';
-  document.getElementById('loadMsg').style.display = 'none';
-  document.getElementById('previewImg').style.display = 'none';
-
-  video.onloadedmetadata = function() {
-    video.play();
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx = canvas.getContext('2d');
-    setStatus('Kamera siap. Klik tombol 📸 untuk ambil foto.', '');
-    document.getElementById('btnCapture').style.display = 'inline-flex';
-
-    // Auto focus
-    try {
-      var track = s.getVideoTracks()[0];
-      var cap = track.getCapabilities();
-      if (cap.focusMode && cap.focusMode.indexOf('continuous') >= 0) {
-        track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-      }
-    } catch (e) {}
-  };
-}
-
-function showErr(t, d) {
-  document.getElementById('loadMsg').style.display = 'none';
-  document.getElementById('errT').textContent = t;
-  document.getElementById('errD').textContent = d;
-  document.getElementById('errbox').classList.add('show');
-  setStatus('Error', 'err');
-}
-
-// ====================================================
-// CAPTURE PHOTO
-// ====================================================
-function doCapture() {
-  if (!ctx) return;
-
-  // Update canvas size
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  // Draw
-  ctx.drawImage(video, 0, 0);
-
-  // Shutter effect
-  var sh = document.getElementById('shutter');
-  sh.classList.remove('flash');
-  void sh.offsetWidth;
-  sh.classList.add('flash');
-  setTimeout(function() { sh.classList.remove('flash'); }, 200);
-
-  // Sound
-  try {
-    var ac = new (window.AudioContext || window.webkitAudioContext)();
-    var o = ac.createOscillator(), g = ac.createGain();
-    o.connect(g); g.connect(ac.destination);
-    o.frequency.value = 800;
-    g.gain.setValueAtTime(0.2, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
-    o.start(); o.stop(ac.currentTime + 0.1);
-  } catch (e) {}
-
-  // Vibrate
-  try { if (navigator.vibrate) navigator.vibrate(50); } catch (e) {}
-
-  // Convert to dataUrl
-  var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-  capturedPhotos.push(dataUrl);
-
-  updateCount();
-  setStatus('✅ Foto ' + capturedPhotos.length + ' diambil! Ambil lagi atau kirim.', 'ok');
-}
-
-// ====================================================
-// SEND PHOTOS BACK TO GAS
-// ====================================================
-function doSend() {
-  if (capturedPhotos.length === 0) return;
-
-  setStatus('⏳ Mengirim ' + capturedPhotos.length + ' foto...', '');
-  document.getElementById('btnSend').disabled = true;
-  document.getElementById('btnSend').textContent = '⏳ Mengirim...';
-
-  if (window.opener) {
-    try {
-      window.opener.postMessage({
-        source: 'packing-photo',
-        action: 'photo-result',
-        photos: capturedPhotos
-      }, '*');
-      showToast('✅ ' + capturedPhotos.length + ' foto dikirim!');
-      stopCam();
-      setTimeout(function() { window.close(); }, 800);
-      return;
-    } catch (e) {}
-  }
-
-  showToast('⚠️ Tidak bisa kirim. Tutup dan coba lagi.');
-  document.getElementById('btnSend').disabled = false;
-  document.getElementById('btnSend').textContent = '✅ Kirim Semua';
-}
-
-function stopCam() {
-  if (stream) {
-    try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {}
-    stream = null;
-  }
-}
-
-function doClose() {
-  stopCam();
-  try { window.close(); } catch (e) {}
-  setTimeout(function() { window.history.back(); }, 300);
-}
-
-// Init
-window.addEventListener('load', function() { startCam(); });
-window.addEventListener('beforeunload', function() { stopCam(); });
+var stream=null,video=document.getElementById('vid'),canvas=document.getElementById('canvas'),ctx=null,capturedPhotos=[];
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},3000)}
+function setStatus(m,c){document.getElementById('status').textContent=m;document.getElementById('status').className='status'+(c?' '+c:'')}
+function updateCount(){var el=document.getElementById('photoCount');el.textContent=capturedPhotos.length>0?'📸 '+capturedPhotos.length+' foto':'';var row=document.getElementById('thumbRow'),html='';for(var i=0;i<capturedPhotos.length;i++)html+='<img src="'+capturedPhotos[i]+'" class="thumb">';row.innerHTML=html;document.getElementById('btnSend').style.display=capturedPhotos.length>0?'inline-flex':'none'}
+function startCam(){document.getElementById('loadMsg').style.display='flex';document.getElementById('errbox').classList.remove('show');video.style.display='none';navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){onCamOK(s)}).catch(function(){navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(function(s){onCamOK(s)}).catch(function(err){document.getElementById('loadMsg').style.display='none';document.getElementById('errT').textContent=err.toString().indexOf('NotAllowed')>=0?'🚫 Izin Ditolak':'❌ Error';document.getElementById('errD').textContent=err.toString().indexOf('NotAllowed')>=0?'🔒 → Camera → Allow':err.toString();document.getElementById('errbox').classList.add('show')})})}
+function onCamOK(s){stream=s;video.srcObject=s;video.style.display='block';document.getElementById('loadMsg').style.display='none';video.onloadedmetadata=function(){video.play();canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx=canvas.getContext('2d');setStatus('Kamera siap. Klik 📸','');document.getElementById('btnCapture').style.display='inline-flex'}}
+function doCapture(){if(!ctx)return;canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);var sh=document.getElementById('shutter');sh.classList.remove('flash');void sh.offsetWidth;sh.classList.add('flash');setTimeout(function(){sh.classList.remove('flash')},200);try{if(navigator.vibrate)navigator.vibrate(50)}catch(e){}capturedPhotos.push(canvas.toDataURL('image/jpeg',0.85));updateCount();setStatus('✅ Foto '+capturedPhotos.length+' diambil!','ok')}
+function doSend(){if(!capturedPhotos.length)return;if(window.opener){try{window.opener.postMessage({source:'packing-photo',action:'photo-result',photos:capturedPhotos},'*');showToast('✅ '+capturedPhotos.length+' foto dikirim!');stopCam();setTimeout(function(){window.close()},800);return}catch(e){}}showToast('⚠️ Tidak bisa kirim.')}
+function stopCam(){if(stream){try{stream.getTracks().forEach(function(t){t.stop()})}catch(e){}stream=null}}
+function doClose(){stopCam();try{window.close()}catch(e){}setTimeout(function(){window.history.back()},300)}
+window.addEventListener('load',function(){startCam()});
+window.addEventListener('beforeunload',function(){stopCam()});
 </script>
 </body>
 </html>
