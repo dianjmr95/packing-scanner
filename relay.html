@@ -284,29 +284,37 @@ function onOK(text, result) {
   addToHistory(text, typeLabel);
 }
 
-// KIRIM KE PC
 function sendAs(target) {
   var value = document.getElementById('resVal').textContent;
   var type = document.getElementById('resTyp').textContent;
 
-  setStatus('⏳ Mengirim sebagai ' + (target === 'pesanan' ? 'No. Pesanan' : 'No. Resi') + '...', '');
+  var sendKey = sessionId + '_' + Date.now();
 
-  db.ref('scans/' + sessionId).set({
+  db.ref('scans/' + sendKey).set({
+    session: sessionId,
     target: target,
     value: value,
     type: type,
     time: Date.now()
   }).then(function() {
-    setTimeout(function() {
-      db.ref('scans/' + sessionId).remove();
-    }, 30000);
+    setTimeout(function() { db.ref('scans/' + sendKey).remove(); }, 30000);
 
-    var targetLabel = (target === 'pesanan') ? '📋 No. Pesanan' : '🚚 No. Resi';
-    document.getElementById('sentMsg').textContent = 'Dikirim sebagai ' + targetLabel + '!';
-    document.getElementById('sentVal').textContent = value + ' (' + type + ')';
-    document.getElementById('sentScreen').classList.add('show');
-    setStatus('✅ Dikirim!', 'ok');
-    showToast('✅ Dikirim ke PC!');
+    var targetLabel = (target === 'pesanan') ? '📋 Pesanan' : '🚚 Resi';
+    showToast('✅ ' + value + ' → ' + targetLabel);
+    
+    // Langsung siap scan lagi (TIDAK tutup kamera)
+    lastVal = '';
+    paused = false;
+    document.getElementById('resBox').classList.remove('show');
+    document.getElementById('targetBtns').style.display = 'none';
+    setStatus('✅ Terkirim! Scan barcode berikutnya...', 'ok');
+    
+    // Resume scanner
+    try {
+      scanner.resume();
+    } catch (e) {
+      startScan();
+    }
   }).catch(function(err) {
     setStatus('❌ Gagal: ' + err.message, 'err');
   });
@@ -384,10 +392,27 @@ function backToScan() {
   doRescan();
 }
 
-function doClose() {
-  try { if (scanner) scanner.stop().then(function() { scanner.clear(); }).catch(function() {}); } catch (e) {}
-  try { window.close(); } catch (e) {}
-  setTimeout(function() { window.history.back(); }, 300);
+function backToScan() {
+  // Sembunyikan layar sent
+  document.getElementById('sentScreen').classList.remove('show');
+  
+  // Reset state
+  lastVal = '';
+  paused = false;
+  
+  // Sembunyikan result & target buttons
+  document.getElementById('resBox').classList.remove('show');
+  document.getElementById('targetBtns').style.display = 'none';
+  
+  // Set status
+  setStatus('📷 Arahkan ke barcode/QR...', '');
+  
+  // Resume atau restart scanner
+  try {
+    scanner.resume();
+  } catch (e) {
+    startScan();
+  }
 }
 
 window.addEventListener('load', function() { startScan(); });
