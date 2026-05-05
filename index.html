@@ -55,45 +55,25 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 </head>
 <body>
 <div class="app">
-  <div class="bar">
-    <h1>📷 Scanner <span class="badge" id="badge">-</span></h1>
-    <button class="xbtn" onclick="doClose()">✕</button>
-  </div>
-  <div class="cam">
-    <div id="reader"></div>
-    <div class="errbox" id="errbox">
-      <div class="icon">📷</div>
-      <div class="title" id="errT">Error</div>
-      <div class="desc" id="errD">-</div>
-      <button class="btn btn-ok" onclick="startScan()" style="max-width:220px;margin-bottom:8px">🔄 Coba Lagi</button>
-      <button class="btn btn-no" onclick="doClose()" style="max-width:220px">✕ Tutup</button>
-    </div>
-    <div class="loading" id="loadMsg"><div class="spinner"></div><div>Memulai scanner...</div></div>
-  </div>
-  <div class="panel">
-    <div class="status" id="status">Memulai...</div>
-    <div class="result" id="resBox"><div class="typ" id="resTyp">-</div><div class="val" id="resVal">-</div></div>
-    <div class="btns" id="btns" style="display:none">
-      <button class="btn btn-ok" onclick="doSend()">✅ Kirim</button>
-      <button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button>
-      <button class="btn btn-no" onclick="doClose()">✕</button>
-    </div>
-  </div>
+  <div class="bar"><h1>📷 Scanner <span class="badge" id="badge">-</span></h1><button class="xbtn" onclick="doClose()">✕</button></div>
+  <div class="cam"><div id="reader"></div>
+    <div class="errbox" id="errbox"><div class="icon">📷</div><div class="title" id="errT">Error</div><div class="desc" id="errD">-</div><button class="btn btn-ok" onclick="startScan()" style="max-width:220px;margin-bottom:8px">🔄 Coba Lagi</button><button class="btn btn-no" onclick="doClose()" style="max-width:220px">✕ Tutup</button></div>
+    <div class="loading" id="loadMsg"><div class="spinner"></div><div>Memulai scanner...</div></div></div>
+  <div class="panel"><div class="status" id="status">Memulai...</div><div class="result" id="resBox"><div class="typ" id="resTyp">-</div><div class="val" id="resVal">-</div></div>
+    <div class="btns" id="btns" style="display:none"><button class="btn btn-ok" onclick="doSend()">✅ Kirim</button><button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button><button class="btn btn-no" onclick="doClose()">✕</button></div></div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
 var P=new URLSearchParams(location.search),scanTarget=P.get('target')||'pesanan',scanType=P.get('type')||'barcode';
 var bdg=document.getElementById('badge');
-if(scanTarget==='resi'){bdg.textContent='🚚 Resi';bdg.className='badge br'}
-else if(scanTarget==='search'){bdg.textContent='🔍 Cari';bdg.className='badge bs'}
-else{bdg.textContent='📋 Pesanan';bdg.className='badge bp'}
+if(scanTarget==='resi'){bdg.textContent='🚚 Resi';bdg.className='badge br'}else if(scanTarget==='search'){bdg.textContent='🔍 Cari';bdg.className='badge bs'}else{bdg.textContent='📋 Pesanan';bdg.className='badge bp'}
 var scanner=null,lastVal='',paused=false,audioCtx=null;
 function beep(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();function t(f,dl,d){var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=f;var tm=audioCtx.currentTime+dl;g.gain.setValueAtTime(.3,tm);g.gain.exponentialRampToValueAtTime(.001,tm+d);o.start(tm);o.stop(tm+d)}t(1200,0,.15);t(1600,.18,.2)}catch(e){}}
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},3000)}
 function setStatus(m,c){var el=document.getElementById('status');el.textContent=m;el.className='status'+(c?' '+c:'')}
 function getFmts(){if(typeof Html5QrcodeSupportedFormats==='undefined')return undefined;if(scanType==='qrcode')return[Html5QrcodeSupportedFormats.QR_CODE];return[Html5QrcodeSupportedFormats.QR_CODE,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.CODE_93,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.ITF,Html5QrcodeSupportedFormats.CODABAR]}
 function startScan(){document.getElementById('errbox').classList.remove('show');document.getElementById('loadMsg').style.display='flex';document.getElementById('resBox').classList.remove('show');document.getElementById('btns').style.display='none';paused=false;lastVal='';if(typeof Html5Qrcode==='undefined'){document.getElementById('loadMsg').style.display='none';document.getElementById('errT').textContent='📦 Library Error';document.getElementById('errD').textContent='Scanner gagal dimuat.';document.getElementById('errbox').classList.add('show');return}if(scanner){try{scanner.stop().then(function(){try{scanner.clear()}catch(e){}doInit()}).catch(function(){try{scanner.clear()}catch(e){}doInit()})}catch(e){doInit()}}else{doInit()}}
-function doInit(){document.getElementById('reader').innerHTML='';scanner=new Html5Qrcode('reader');var config={fps:15,qrbox:function(vw,vh){var m=Math.min(vw,vh),s=Math.floor(m*.75);s=Math.max(120,Math.min(s,350));if(scanType==='barcode')return{width:s,height:Math.max(80,Math.floor(s*.4))};return{width:s,height:Math.max(100,Math.floor(s*.85))}},formatsToSupport:getFmts(),experimentalFeatures:{useBarCodeDetectorIfSupported:true}};scanner.start({facingMode:'environment'},config,onScanOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode / QR code...','')}).catch(function(err){scanner.start({facingMode:'user'},config,onScanOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode/QR...','')}).catch(function(){document.getElementById('loadMsg').style.display='none';var msg=err.toString();document.getElementById('errT').textContent=msg.indexOf('NotAllowed')>=0?'🚫 Izin Ditolak':'❌ Error';document.getElementById('errD').textContent=msg.indexOf('NotAllowed')>=0?'🔒 → Camera → Allow':msg;document.getElementById('errbox').classList.add('show');setStatus('❌ Error','err')})})}
+function doInit(){document.getElementById('reader').innerHTML='';scanner=new Html5Qrcode('reader');var config={fps:15,qrbox:function(vw,vh){var m=Math.min(vw,vh),s=Math.floor(m*.75);s=Math.max(120,Math.min(s,350));if(scanType==='barcode')return{width:s,height:Math.max(80,Math.floor(s*.4))};return{width:s,height:Math.max(100,Math.floor(s*.85))}},formatsToSupport:getFmts(),experimentalFeatures:{useBarCodeDetectorIfSupported:true}};scanner.start({facingMode:'environment'},config,onScanOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode / QR code...','')}).catch(function(err){scanner.start({facingMode:'user'},config,onScanOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode/QR...','')}).catch(function(){document.getElementById('loadMsg').style.display='none';var msg=err.toString();document.getElementById('errT').textContent=msg.indexOf('NotAllowed')>=0?'🚫 Izin Ditolak':'❌ Error';document.getElementById('errD').textContent=msg.indexOf('NotAllowed')>=0?'🔒 → Camera → Allow':msg;document.getElementById('errbox').classList.add('show')})})}
 function onScanOK(text,result){if(paused)return;if(text===lastVal)return;lastVal=text;paused=true;beep();try{if(navigator.vibrate)navigator.vibrate([100,50,100])}catch(e){}try{scanner.pause(true)}catch(e){}var fmt='Barcode';try{fmt=result.result.format.formatName}catch(e){}var typeLabel=(fmt==='QR_CODE')?'QR Code':'Barcode ('+fmt+')';document.getElementById('resVal').textContent=text;document.getElementById('resTyp').textContent=typeLabel;document.getElementById('resBox').classList.add('show');document.getElementById('btns').style.display='flex';setStatus('✅ Berhasil!','ok')}
 function doSend(){var value=document.getElementById('resVal').textContent,type=document.getElementById('resTyp').textContent;if(window.opener){try{window.opener.postMessage({source:'packing-scanner',action:'scan-result',target:scanTarget,value:value,type:type},'*');showToast('✅ Kode dikirim!');stopAll();setTimeout(function(){window.close()},800);return}catch(e){}}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(value).then(function(){showToast('📋 Disalin!');setTimeout(function(){try{window.close()}catch(e){}},1500)}).catch(function(){prompt('Salin:',value)})}else{prompt('Salin:',value)}}
 function doRescan(){lastVal='';paused=false;document.getElementById('resBox').classList.remove('show');document.getElementById('btns').style.display='none';setStatus('📷 Arahkan ke barcode/QR...','');try{scanner.resume()}catch(e){startScan()}}
