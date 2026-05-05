@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Rekam Video</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif}
@@ -39,19 +41,23 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
 .toast.show{display:block}
+.prog{margin:8px 0;display:none}
+.prog.show{display:block}
+.prog-bar{height:6px;background:#334155;border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:#10b981;border-radius:3px;transition:width .3s;width:0%}
+.prog-text{font-size:.72rem;color:#94a3b8;text-align:center;margin-top:4px}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="bar">
-    <h1>🎥 Rekam Video Packing</h1>
+    <h1>🎥 Rekam Video</h1>
     <button class="xbtn" onclick="doClose()">✕</button>
   </div>
 
   <div class="cam">
     <video id="liveVid" autoplay muted playsinline style="display:none"></video>
     <video id="playVid" controls playsinline style="display:none;width:100%;height:100%;object-fit:contain"></video>
-
     <div class="errbox" id="errbox">
       <div class="icon">📷</div>
       <div class="title" id="errT">Kamera Error</div>
@@ -60,7 +66,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
       <br><br>
       <button class="btn btn-no" onclick="doClose()">✕ Tutup</button>
     </div>
-
     <div class="loading" id="loadMsg">
       <div class="spinner"></div>
       <div>Meminta izin kamera...</div>
@@ -68,23 +73,33 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
   </div>
 
   <div class="panel">
-    <div class="timer" id="timer" style="display:none">
-      <span class="rec-dot"></span>00:00
-    </div>
+    <div class="timer" id="timer" style="display:none"><span class="rec-dot"></span>00:00</div>
     <div class="status" id="status">Memulai kamera...</div>
+    <div class="prog" id="prog"><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div><div class="prog-text" id="progText"></div></div>
     <div class="btns">
       <button class="btn btn-rec" id="btnRec" onclick="doRec()" style="display:none">⏺️ Mulai Rekam</button>
       <button class="btn btn-stop" id="btnStop" onclick="doStop()" style="display:none">⏹️ Stop</button>
       <button class="btn btn-ok" id="btnSend" onclick="doSend()" style="display:none">✅ Kirim Video</button>
-      <button class="btn btn-retry" id="btnRetry" onclick="doRetry()" style="display:none">🔄 Rekam Ulang</button>
+      <button class="btn btn-retry" id="btnRetry" onclick="doRetry()" style="display:none">🔄 Ulang</button>
       <button class="btn btn-no" id="btnCancel" onclick="doClose()">✕ Batal</button>
     </div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
+// Firebase
+firebase.initializeApp({
+  apiKey: "AIzaSyAJGVKRhmMYFGIy07Y5nwvOQlyDDDjN3Xg",
+  authDomain: "packing-scanner-31d3a.firebaseapp.com",
+  databaseURL: "https://packing-scanner-31d3a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "packing-scanner-31d3a"
+});
+var db = firebase.database();
+
+var params = new URLSearchParams(location.search);
+var sessionId = params.get('session') || 'rec_' + Date.now();
+
 var stream = null;
 var recorder = null;
 var chunks = [];
@@ -100,129 +115,81 @@ function showToast(m) {
 }
 
 function setStatus(m, c) {
-  var el = document.getElementById('status');
-  el.textContent = m;
-  el.className = 'status' + (c ? ' ' + c : '');
+  document.getElementById('status').textContent = m;
+  document.getElementById('status').className = 'status' + (c ? ' ' + c : '');
 }
 
 function fmtTime(s) {
-  var m = Math.floor(s / 60).toString().padStart(2, '0');
-  var sc = (s % 60).toString().padStart(2, '0');
-  return m + ':' + sc;
+  return Math.floor(s / 60).toString().padStart(2, '0') + ':' + (s % 60).toString().padStart(2, '0');
 }
 
+function setProgress(p, t) {
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('progFill').style.width = p + '%';
+  document.getElementById('progText').textContent = t || '';
+}
+
+// START CAMERA
 function startCam() {
   document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('errbox').classList.remove('show');
   document.getElementById('liveVid').style.display = 'none';
   document.getElementById('playVid').style.display = 'none';
 
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showErr('Browser Tidak Support', 'Gunakan Chrome terbaru.');
-    return;
-  }
-
   navigator.mediaDevices.getUserMedia({
-    video: {
-      facingMode: { ideal: 'environment' },
-      width: { ideal: 1280 },
-      height: { ideal: 720 }
-    },
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
     audio: true
   })
-  .then(function(s) {
-    stream = s;
-    var vid = document.getElementById('liveVid');
-    vid.srcObject = s;
-    vid.style.display = 'block';
-    document.getElementById('loadMsg').style.display = 'none';
-    vid.onloadedmetadata = function() {
-      vid.play();
-      setStatus('Kamera siap. Klik tombol rekam.', '');
-      document.getElementById('btnRec').style.display = 'inline-flex';
-    };
-  })
-  .catch(function(err) {
+  .then(function(s) { onCamOK(s); })
+  .catch(function() {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(function(s) {
-      stream = s;
-      var vid = document.getElementById('liveVid');
-      vid.srcObject = s;
-      vid.style.display = 'block';
-      document.getElementById('loadMsg').style.display = 'none';
-      vid.onloadedmetadata = function() {
-        vid.play();
-        setStatus('Kamera siap.', '');
-        document.getElementById('btnRec').style.display = 'inline-flex';
-      };
-    })
-    .catch(function(err2) {
+    .then(function(s) { onCamOK(s); })
+    .catch(function() {
       navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-      .then(function(s) {
-        stream = s;
-        var vid = document.getElementById('liveVid');
-        vid.srcObject = s;
-        vid.style.display = 'block';
+      .then(function(s) { onCamOK(s); })
+      .catch(function(err) {
         document.getElementById('loadMsg').style.display = 'none';
-        vid.onloadedmetadata = function() {
-          vid.play();
-          setStatus('Kamera siap (tanpa audio).', '');
-          document.getElementById('btnRec').style.display = 'inline-flex';
-        };
-      })
-      .catch(function(err3) {
         var msg = err.toString();
-        if (msg.indexOf('NotAllowed') >= 0) {
-          showErr('🚫 Izin Ditolak', 'Klik 🔒 di address bar → Camera → Allow → Coba Lagi');
-        } else if (msg.indexOf('NotFound') >= 0) {
-          showErr('📷 Tidak Ada Kamera', 'Perangkat tidak punya kamera/webcam.');
-        } else {
-          showErr('❌ Error', msg);
-        }
+        document.getElementById('errT').textContent = msg.indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
+        document.getElementById('errD').textContent = msg.indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : msg;
+        document.getElementById('errbox').classList.add('show');
       });
     });
   });
 }
 
-function showErr(t, d) {
+function onCamOK(s) {
+  stream = s;
+  var vid = document.getElementById('liveVid');
+  vid.srcObject = s;
+  vid.style.display = 'block';
   document.getElementById('loadMsg').style.display = 'none';
-  document.getElementById('errT').textContent = t;
-  document.getElementById('errD').textContent = d;
-  document.getElementById('errbox').classList.add('show');
-  setStatus('Error', 'err');
+  vid.onloadedmetadata = function() {
+    vid.play();
+    setStatus('Kamera siap. Klik rekam.', '');
+    document.getElementById('btnRec').style.display = 'inline-flex';
+  };
 }
 
+// RECORD
 function doRec() {
   chunks = [];
   blob = null;
-
   var mtype = 'video/webm;codecs=vp9,opus';
   if (!MediaRecorder.isTypeSupported(mtype)) mtype = 'video/webm;codecs=vp8,opus';
   if (!MediaRecorder.isTypeSupported(mtype)) mtype = 'video/webm';
   if (!MediaRecorder.isTypeSupported(mtype)) mtype = 'video/mp4';
+  try { recorder = new MediaRecorder(stream, { mimeType: mtype }); }
+  catch (e) { recorder = new MediaRecorder(stream); }
 
-  try {
-    recorder = new MediaRecorder(stream, { mimeType: mtype });
-  } catch (e) {
-    recorder = new MediaRecorder(stream);
-  }
-
-  recorder.ondataavailable = function(e) {
-    if (e.data && e.data.size > 0) chunks.push(e.data);
-  };
-
+  recorder.ondataavailable = function(e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
   recorder.onstop = function() {
     blob = new Blob(chunks, { type: recorder.mimeType });
-    var url = URL.createObjectURL(blob);
-    var playVid = document.getElementById('playVid');
-    playVid.src = url;
-    playVid.style.display = 'block';
+    document.getElementById('playVid').src = URL.createObjectURL(blob);
+    document.getElementById('playVid').style.display = 'block';
     document.getElementById('liveVid').style.display = 'none';
-
     clearInterval(timerInterval);
-    var sz = (blob.size / 1048576).toFixed(2);
-    setStatus('✅ Video terekam! ' + sz + ' MB | ' + fmtTime(seconds), 'ok');
-
+    setStatus('✅ ' + (blob.size / 1048576).toFixed(2) + ' MB | ' + fmtTime(seconds), 'ok');
     document.getElementById('btnStop').style.display = 'none';
     document.getElementById('btnSend').style.display = 'inline-flex';
     document.getElementById('btnRetry').style.display = 'inline-flex';
@@ -230,12 +197,10 @@ function doRec() {
   };
 
   recorder.start(1000);
-
   document.getElementById('btnRec').style.display = 'none';
   document.getElementById('btnStop').style.display = 'inline-flex';
   document.getElementById('btnCancel').style.display = 'none';
   setStatus('⏺️ Merekam...', '');
-
   seconds = 0;
   document.getElementById('timer').style.display = 'block';
   document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>00:00';
@@ -246,9 +211,7 @@ function doRec() {
 }
 
 function doStop() {
-  if (recorder && recorder.state !== 'inactive') {
-    recorder.stop();
-  }
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
 }
 
 function doRetry() {
@@ -260,20 +223,29 @@ function doRetry() {
   document.getElementById('btnRetry').style.display = 'none';
   document.getElementById('btnRec').style.display = 'inline-flex';
   document.getElementById('btnCancel').style.display = 'inline-flex';
-  setStatus('Kamera siap. Klik rekam.', '');
+  document.getElementById('prog').classList.remove('show');
+  setStatus('Kamera siap.', '');
 }
 
+// SEND VIDEO
 function doSend() {
   if (!blob) return;
 
-  setStatus('⏳ Mengirim video...', '');
   document.getElementById('btnSend').disabled = true;
   document.getElementById('btnSend').textContent = '⏳ Mengirim...';
+  document.getElementById('btnRetry').style.display = 'none';
+  setStatus('⏳ Mengkonversi video...', '');
+  setProgress(10, 'Membaca video...');
 
   var reader = new FileReader();
   reader.onload = function(e) {
     var dataUrl = e.target.result;
+    var sizeMB = (blob.size / 1048576).toFixed(2);
 
+    setProgress(30, 'Mengirim via Firebase...');
+    setStatus('⏳ Mengirim ' + sizeMB + ' MB...', '');
+
+    // Coba postMessage dulu (jika same-origin)
     if (window.opener) {
       try {
         window.opener.postMessage({
@@ -283,28 +255,93 @@ function doSend() {
           size: blob.size,
           type: blob.type
         }, '*');
+        setProgress(100, 'Selesai!');
         showToast('✅ Video dikirim!');
         stopCam();
         setTimeout(function() { window.close(); }, 800);
         return;
-      } catch (e) {}
+      } catch (err) {
+        // postMessage gagal, lanjut ke Firebase
+      }
     }
 
-    var a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'packing_' + Date.now() + '.webm';
-    a.click();
-    showToast('📥 Video didownload.');
-    setTimeout(function() { try { window.close(); } catch(e) {} }, 2000);
+    // Kirim via Firebase
+    // Catatan: Firebase RTDB max 10MB per write
+    // Untuk video besar, kita kirim sebagai chunks
+    var base64 = dataUrl.split(',')[1] || '';
+    var chunkSize = 500000; // 500KB per chunk
+    var totalChunks = Math.ceil(base64.length / chunkSize);
+
+    if (totalChunks <= 1) {
+      // Video kecil, kirim langsung
+      db.ref('videos/' + sessionId).set({
+        dataUrl: dataUrl,
+        size: blob.size,
+        type: blob.type,
+        time: Date.now()
+      }).then(function() {
+        setProgress(100, 'Selesai!');
+        showToast('✅ Video dikirim!');
+        setTimeout(function() { db.ref('videos/' + sessionId).remove(); }, 60000);
+        stopCam();
+        setTimeout(function() { window.close(); }, 800);
+      }).catch(function(err) {
+        setStatus('❌ Gagal: ' + err.message, 'err');
+        document.getElementById('btnSend').disabled = false;
+        document.getElementById('btnSend').textContent = '✅ Kirim Video';
+        document.getElementById('btnRetry').style.display = 'inline-flex';
+      });
+    } else {
+      // Video besar, kirim per chunk
+      var sent = 0;
+      function sendChunk() {
+        if (sent >= totalChunks) {
+          // Semua chunk terkirim, kirim metadata
+          db.ref('videos/' + sessionId).set({
+            chunked: true,
+            totalChunks: totalChunks,
+            size: blob.size,
+            type: blob.type,
+            mimeHeader: dataUrl.split(',')[0] + ',',
+            time: Date.now()
+          }).then(function() {
+            setProgress(100, 'Selesai!');
+            showToast('✅ Video dikirim!');
+            setTimeout(function() {
+              db.ref('videos/' + sessionId).remove();
+              db.ref('video_chunks/' + sessionId).remove();
+            }, 120000);
+            stopCam();
+            setTimeout(function() { window.close(); }, 800);
+          });
+          return;
+        }
+        var start = sent * chunkSize;
+        var end = Math.min(start + chunkSize, base64.length);
+        var chunk = base64.substring(start, end);
+        var pct = 30 + Math.round((sent / totalChunks) * 60);
+        setProgress(pct, 'Chunk ' + (sent + 1) + '/' + totalChunks);
+        setStatus('⏳ Mengirim chunk ' + (sent + 1) + '/' + totalChunks, '');
+
+        db.ref('video_chunks/' + sessionId + '/' + sent).set(chunk).then(function() {
+          sent++;
+          sendChunk();
+        }).catch(function(err) {
+          setStatus('❌ Gagal chunk ' + (sent + 1) + ': ' + err.message, 'err');
+          document.getElementById('btnSend').disabled = false;
+          document.getElementById('btnSend').textContent = '✅ Kirim Video';
+          document.getElementById('btnRetry').style.display = 'inline-flex';
+        });
+      }
+      sendChunk();
+    }
   };
   reader.readAsDataURL(blob);
 }
 
 function stopCam() {
   if (timerInterval) clearInterval(timerInterval);
-  if (recorder && recorder.state !== 'inactive') {
-    try { recorder.stop(); } catch (e) {}
-  }
+  if (recorder && recorder.state !== 'inactive') try { recorder.stop(); } catch (e) {}
   if (stream) {
     try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {}
     stream = null;
