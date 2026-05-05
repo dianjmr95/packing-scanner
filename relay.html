@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scan dari HP</title>
+<title>Scan HP</title>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -58,34 +58,16 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 </head>
 <body>
 <div class="app">
-  <div class="bar">
-    <h1>📱 Scan HP → PC</h1>
-    <button class="xbtn" onclick="doClose()">✕</button>
-  </div>
+  <div class="bar"><h1>📱 Scan HP → PC</h1><button class="xbtn" onclick="doClose()">✕</button></div>
   <div class="cam">
     <div id="reader"></div>
-    <div class="sent" id="sentScreen">
-      <div class="icon">✅</div>
-      <div class="msg">Kode dikirim ke PC!</div>
-      <div class="sub" id="sentVal">-</div>
-      <br><div class="sub">Halaman ini bisa ditutup.</div><br>
-      <button class="btn btn-ok" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
-    </div>
-    <div class="errbox" id="errbox">
-      <div class="icon">📷</div>
-      <div class="title" id="errT">Error</div>
-      <div class="desc" id="errD">-</div>
-      <button class="btn btn-ok" onclick="startScan()" style="max-width:200px;margin-bottom:8px">🔄 Coba Lagi</button>
-      <button class="btn btn-no" onclick="doClose()" style="max-width:200px">✕ Tutup</button>
-    </div>
+    <div class="sent" id="sentScreen"><div class="icon">✅</div><div class="msg">Kode dikirim ke PC!</div><div class="sub" id="sentVal">-</div><br><div class="sub">Halaman ini bisa ditutup.</div><br><button class="btn btn-ok" onclick="doClose()" style="max-width:200px">✕ Tutup</button></div>
+    <div class="errbox" id="errbox"><div class="icon">📷</div><div class="title" id="errT">Error</div><div class="desc" id="errD">-</div><button class="btn btn-ok" onclick="startScan()" style="max-width:200px;margin-bottom:8px">🔄 Coba Lagi</button><button class="btn btn-no" onclick="doClose()" style="max-width:200px">✕ Tutup</button></div>
     <div class="loading" id="loadMsg"><div class="spinner"></div><div>Memulai scanner...</div></div>
   </div>
   <div class="panel">
     <div class="status" id="status">Memulai...</div>
-    <div class="result" id="resBox">
-      <div class="typ" id="resTyp">-</div>
-      <div class="val" id="resVal">-</div>
-    </div>
+    <div class="result" id="resBox"><div class="typ" id="resTyp">-</div><div class="val" id="resVal">-</div></div>
     <div class="btns" id="btns" style="display:none">
       <button class="btn btn-ok" onclick="doSend()">✅ Kirim ke PC</button>
       <button class="btn btn-warn" onclick="doRescan()">🔄 Ulang</button>
@@ -94,74 +76,18 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 </div>
 <div class="toast" id="toast"></div>
 <script>
-firebase.initializeApp({
-  apiKey: "AIzaSyAJGVKRhmMYFGIy07Y5nwvOQlyDDDjN3Xg",
-  authDomain: "packing-scanner-31d3a.firebaseapp.com",
-  databaseURL: "https://packing-scanner-31d3a-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "packing-scanner-31d3a"
-});
-var db = firebase.database();
-var params = new URLSearchParams(location.search);
-var scanTarget = params.get('target') || 'pesanan';
-var scanType = params.get('type') || 'barcode';
-var sessionId = params.get('session') || '';
-var scanner = null, lastVal = '', paused = false, audioCtx = null;
-
+firebase.initializeApp({apiKey:"AIzaSyAJGVKRhmMYFGIy07Y5nwvOQlyDDDjN3Xg",authDomain:"packing-scanner-31d3a.firebaseapp.com",databaseURL:"https://packing-scanner-31d3a-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"packing-scanner-31d3a"});
+var db=firebase.database();
+var params=new URLSearchParams(location.search),scanTarget=params.get('target')||'pesanan',scanType=params.get('type')||'barcode',sessionId=params.get('session')||'';
+var scanner=null,lastVal='',paused=false,audioCtx=null;
 function beep(){try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();function t(f,dl,d){var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=f;var tm=audioCtx.currentTime+dl;g.gain.setValueAtTime(.3,tm);g.gain.exponentialRampToValueAtTime(.001,tm+d);o.start(tm);o.stop(tm+d)}t(1200,0,.15);t(1600,.18,.2)}catch(e){}}
 function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},3000)}
-function setStatus(m,c){var el=document.getElementById('status');el.textContent=m;el.className='status'+(c?' '+c:'')}
+function setStatus(m,c){document.getElementById('status').textContent=m;document.getElementById('status').className='status'+(c?' '+c:'')}
 function getFmts(){if(typeof Html5QrcodeSupportedFormats==='undefined')return undefined;return[Html5QrcodeSupportedFormats.QR_CODE,Html5QrcodeSupportedFormats.CODE_128,Html5QrcodeSupportedFormats.CODE_39,Html5QrcodeSupportedFormats.CODE_93,Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,Html5QrcodeSupportedFormats.ITF,Html5QrcodeSupportedFormats.CODABAR]}
-
-function startScan(){
-  document.getElementById('errbox').classList.remove('show');
-  document.getElementById('sentScreen').classList.remove('show');
-  document.getElementById('loadMsg').style.display='flex';
-  document.getElementById('resBox').classList.remove('show');
-  document.getElementById('btns').style.display='none';
-  paused=false;lastVal='';
-  if(typeof Html5Qrcode==='undefined'){document.getElementById('loadMsg').style.display='none';document.getElementById('errT').textContent='📦 Library Error';document.getElementById('errD').textContent='Scanner gagal dimuat.';document.getElementById('errbox').classList.add('show');return}
-  if(scanner){try{scanner.stop().then(function(){try{scanner.clear()}catch(e){}doInit()}).catch(function(){try{scanner.clear()}catch(e){}doInit()})}catch(e){doInit()}}else{doInit()}
-}
-
-function doInit(){
-  document.getElementById('reader').innerHTML='';
-  scanner=new Html5Qrcode('reader');
-  var config={fps:15,qrbox:function(vw,vh){var m=Math.min(vw,vh),s=Math.floor(m*.75);s=Math.max(120,Math.min(s,350));return{width:s,height:Math.max(80,Math.floor(s*.45))}},formatsToSupport:getFmts(),experimentalFeatures:{useBarCodeDetectorIfSupported:true}};
-  scanner.start({facingMode:'environment'},config,onOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode / QR code...','')}).catch(function(err){
-    scanner.start({facingMode:'user'},config,onOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode/QR...','')}).catch(function(){document.getElementById('loadMsg').style.display='none';var msg=err.toString();document.getElementById('errT').textContent=msg.indexOf('NotAllowed')>=0?'🚫 Izin Ditolak':'❌ Error';document.getElementById('errD').textContent=msg.indexOf('NotAllowed')>=0?'🔒 → Camera → Allow':msg;document.getElementById('errbox').classList.add('show')})
-  });
-}
-
-function onOK(text,result){
-  if(paused)return;if(text===lastVal)return;
-  lastVal=text;paused=true;beep();
-  try{if(navigator.vibrate)navigator.vibrate([100,50,100])}catch(e){}
-  try{scanner.pause(true)}catch(e){}
-  var fmt='Barcode';try{fmt=result.result.format.formatName}catch(e){}
-  var typeLabel=(fmt==='QR_CODE')?'QR Code':'Barcode ('+fmt+')';
-  document.getElementById('resVal').textContent=text;
-  document.getElementById('resTyp').textContent=typeLabel;
-  document.getElementById('resBox').classList.add('show');
-  document.getElementById('btns').style.display='flex';
-  setStatus('✅ Berhasil!','ok');
-}
-
-function doSend(){
-  var value=document.getElementById('resVal').textContent;
-  var type=document.getElementById('resTyp').textContent;
-  setStatus('⏳ Mengirim...','');
-  db.ref('scans/'+sessionId).set({
-    target:scanTarget,value:value,type:type,time:Date.now()
-  }).then(function(){
-    setTimeout(function(){db.ref('scans/'+sessionId).remove()},30000);
-    document.getElementById('sentVal').textContent=value+' ('+type+')';
-    document.getElementById('sentScreen').classList.add('show');
-    setStatus('✅ Dikirim!','ok');
-    showToast('✅ Kode dikirim ke PC!');
-    try{scanner.stop().then(function(){scanner.clear()}).catch(function(){})}catch(e){}
-  }).catch(function(err){setStatus('❌ Gagal: '+err.message,'err')});
-}
-
+function startScan(){document.getElementById('errbox').classList.remove('show');document.getElementById('sentScreen').classList.remove('show');document.getElementById('loadMsg').style.display='flex';document.getElementById('resBox').classList.remove('show');document.getElementById('btns').style.display='none';paused=false;lastVal='';if(typeof Html5Qrcode==='undefined'){document.getElementById('loadMsg').style.display='none';document.getElementById('errT').textContent='📦 Library Error';document.getElementById('errD').textContent='Scanner gagal dimuat.';document.getElementById('errbox').classList.add('show');return}if(scanner){try{scanner.stop().then(function(){try{scanner.clear()}catch(e){}doInit()}).catch(function(){try{scanner.clear()}catch(e){}doInit()})}catch(e){doInit()}}else{doInit()}}
+function doInit(){document.getElementById('reader').innerHTML='';scanner=new Html5Qrcode('reader');var config={fps:15,qrbox:function(vw,vh){var m=Math.min(vw,vh),s=Math.floor(m*.75);s=Math.max(120,Math.min(s,350));return{width:s,height:Math.max(80,Math.floor(s*.45))}},formatsToSupport:getFmts(),experimentalFeatures:{useBarCodeDetectorIfSupported:true}};scanner.start({facingMode:'environment'},config,onOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode / QR code...','')}).catch(function(err){scanner.start({facingMode:'user'},config,onOK,function(){}).then(function(){document.getElementById('loadMsg').style.display='none';setStatus('📷 Arahkan ke barcode/QR...','')}).catch(function(){document.getElementById('loadMsg').style.display='none';document.getElementById('errT').textContent=err.toString().indexOf('NotAllowed')>=0?'🚫 Izin Ditolak':'❌ Error';document.getElementById('errD').textContent=err.toString().indexOf('NotAllowed')>=0?'🔒 → Camera → Allow':err.toString();document.getElementById('errbox').classList.add('show')})})}
+function onOK(text,result){if(paused)return;if(text===lastVal)return;lastVal=text;paused=true;beep();try{if(navigator.vibrate)navigator.vibrate([100,50,100])}catch(e){}try{scanner.pause(true)}catch(e){}var fmt='Barcode';try{fmt=result.result.format.formatName}catch(e){}var typeLabel=(fmt==='QR_CODE')?'QR Code':'Barcode ('+fmt+')';document.getElementById('resVal').textContent=text;document.getElementById('resTyp').textContent=typeLabel;document.getElementById('resBox').classList.add('show');document.getElementById('btns').style.display='flex';setStatus('✅ Berhasil!','ok')}
+function doSend(){var value=document.getElementById('resVal').textContent,type=document.getElementById('resTyp').textContent;setStatus('⏳ Mengirim...','');db.ref('scans/'+sessionId).set({target:scanTarget,value:value,type:type,time:Date.now()}).then(function(){setTimeout(function(){db.ref('scans/'+sessionId).remove()},30000);document.getElementById('sentVal').textContent=value+' ('+type+')';document.getElementById('sentScreen').classList.add('show');setStatus('✅ Dikirim!','ok');showToast('✅ Kode dikirim ke PC!');try{scanner.stop().then(function(){scanner.clear()}).catch(function(){})}catch(e){}}).catch(function(err){setStatus('❌ Gagal: '+err.message,'err')})}
 function doRescan(){lastVal='';paused=false;document.getElementById('resBox').classList.remove('show');document.getElementById('btns').style.display='none';setStatus('📷 Arahkan ke barcode/QR...','');try{scanner.resume()}catch(e){startScan()}}
 function doClose(){try{if(scanner)scanner.stop().then(function(){scanner.clear()}).catch(function(){})}catch(e){}try{window.close()}catch(e){}setTimeout(function(){window.history.back()},300)}
 window.addEventListener('load',function(){startScan()});
