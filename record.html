@@ -61,7 +61,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
       <button class="btn btn-retry" id="btnRetry" onclick="doRetry()" style="display:none">🔄 Ulang</button>
       <button class="btn btn-no" id="btnCancel" onclick="doClose()">✕ Batal</button>
     </div>
-    <div class="tip">💡 Rekam max 15 detik agar cepat terkirim</div>
+   <div class="tip">💡 Rekam sepuasnya, lalu klik Stop & Kirim</div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -72,8 +72,8 @@ var chunks = [];
 var blob = null;
 var timerInterval = null;
 var seconds = 0;
-var MAX_SECONDS = 30;
-
+var MAX_SECONDS = 0; // 0 = tanpa batas
+  
 function showToast(m) {
   var t = document.getElementById('toast');
   t.textContent = m;
@@ -179,13 +179,11 @@ function doRec() {
   timerInterval = setInterval(function() {
     seconds++;
     document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>' + fmtTime(seconds);
-    // Auto stop jika terlalu lama
-    if (seconds >= MAX_SECONDS) {
+    // Auto stop hanya jika ada batas
+    if (MAX_SECONDS > 0 && seconds >= MAX_SECONDS) {
       doStop();
       showToast('⏹️ Auto stop: max ' + MAX_SECONDS + ' detik');
     }
-  }, 1000);
-}
 
 function doStop() {
   if (recorder && recorder.state !== 'inactive') recorder.stop();
