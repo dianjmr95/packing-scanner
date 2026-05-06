@@ -96,25 +96,18 @@ function startCam() {
   document.getElementById('liveVid').style.display = 'none';
   document.getElementById('playVid').style.display = 'none';
 
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
-    audio: true
-  }).then(function(s) {
-    onCamOK(s);
-  }).catch(function() {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(function(s) {
-      onCamOK(s);
-    }).catch(function() {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(function(s) {
-        onCamOK(s);
-      }).catch(function(err) {
-        document.getElementById('loadMsg').style.display = 'none';
-        document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
-        document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : err.toString();
-        document.getElementById('errbox').classList.add('show');
-      });
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(function(s) { onCamOK(s); })
+    .catch(function() {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(function(s) { onCamOK(s); })
+        .catch(function(err) {
+          document.getElementById('loadMsg').style.display = 'none';
+          document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
+          document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : err.toString();
+          document.getElementById('errbox').classList.add('show');
+        });
     });
-  });
 }
 
 function onCamOK(s) {
