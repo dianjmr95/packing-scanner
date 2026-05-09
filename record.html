@@ -39,21 +39,39 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
 .toast.show{display:block}
-.tip{text-align:center;font-size:.72rem;color:#64748b;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="bar"><h1>🎥 Rekam Video</h1><button class="xbtn" onclick="doClose()">✕</button></div>
+  <div class="bar">
+    <h1>🎥 Rekam Video</h1>
+    <button class="xbtn" onclick="doClose()">✕</button>
+  </div>
+
   <div class="cam">
     <video id="liveVid" autoplay muted playsinline style="display:none"></video>
     <video id="playVid" controls playsinline style="display:none;width:100%;height:100%;object-fit:contain"></video>
-    <div class="errbox" id="errbox"><div class="icon">📷</div><div class="title" id="errT">Error</div><div class="desc" id="errD">-</div><button class="btn btn-retry" onclick="startCam()">🔄 Coba Lagi</button><br><br><button class="btn btn-no" onclick="doClose()">✕ Tutup</button></div>
-    <div class="loading" id="loadMsg"><div class="spinner"></div><div>Meminta izin kamera...</div></div>
+
+    <div class="errbox" id="errbox">
+      <div class="icon">📷</div>
+      <div class="title" id="errT">Error</div>
+      <div class="desc" id="errD">-</div>
+      <button class="btn btn-retry" onclick="startCam()">🔄 Coba Lagi</button>
+      <br><br>
+      <button class="btn btn-no" onclick="doClose()">✕ Tutup</button>
+    </div>
+
+    <div class="loading" id="loadMsg">
+      <div class="spinner"></div>
+      <div>Membuka kamera...</div>
+    </div>
   </div>
+
   <div class="panel">
-    <div class="timer" id="timer" style="display:none"><span class="rec-dot"></span>00:00</div>
-    <div class="status" id="status">Memulai kamera...</div>
+    <div class="timer" id="timer" style="display:none">
+      <span class="rec-dot"></span>00:00
+    </div>
+    <div class="status" id="status">Memulai...</div>
     <div class="btns">
       <button class="btn btn-rec" id="btnRec" onclick="doRec()" style="display:none">⏺️ Rekam</button>
       <button class="btn btn-stop" id="btnStop" onclick="doStop()" style="display:none">⏹️ Stop</button>
@@ -61,10 +79,11 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
       <button class="btn btn-retry" id="btnRetry" onclick="doRetry()" style="display:none">🔄 Ulang</button>
       <button class="btn btn-no" id="btnCancel" onclick="doClose()">✕ Batal</button>
     </div>
-   <div class="tip">💡 Rekam sepuasnya, lalu klik Stop & Kirim</div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 var stream = null;
 var recorder = null;
@@ -72,8 +91,8 @@ var chunks = [];
 var blob = null;
 var timerInterval = null;
 var seconds = 0;
-var MAX_SECONDS = 0; // 0 = tanpa batas
-  
+var MAX_SECONDS = 60;
+
 function showToast(m) {
   var t = document.getElementById('toast');
   t.textContent = m;
@@ -90,41 +109,51 @@ function fmtTime(s) {
   return Math.floor(s / 60).toString().padStart(2, '0') + ':' + (s % 60).toString().padStart(2, '0');
 }
 
+// ==========================================
+// START CAMERA - VIDEO ONLY (CEPAT!)
+// ==========================================
 function startCam() {
   document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('errbox').classList.remove('show');
   document.getElementById('liveVid').style.display = 'none';
   document.getElementById('playVid').style.display = 'none';
 
-  // Minta VIDEO SAJA dulu (cepat!) Audio ditambah setelah kamera aktif
+  // Minta VIDEO SAJA (tanpa audio) → jauh lebih cepat
   navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-    .then(function(videoStream) {
-      // Kamera sudah aktif! Sekarang coba tambah audio
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(function(audioStream) {
-          // Gabungkan video + audio
-          var audioTrack = audioStream.getAudioTracks()[0];
-          videoStream.addTrack(audioTrack);
-          onCamOK(videoStream);
-        })
-        .catch(function() {
-          // Audio gagal, pakai video saja (tidak apa-apa)
-          onCamOK(videoStream);
-        });
+    .then(function(vidStream) {
+      // Kamera sudah aktif! Tampilkan dulu
+      onCamOK(vidStream);
+
+      // Lalu coba tambah audio di background (tidak blocking)
+      try {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(function(audioStream) {
+            var audioTrack = audioStream.getAudioTracks()[0];
+            if (audioTrack && stream) {
+              stream.addTrack(audioTrack);
+            }
+          })
+          .catch(function() {
+            // Audio gagal, tidak apa-apa
+          });
+      } catch (e) {}
     })
     .catch(function(err) {
       document.getElementById('loadMsg').style.display = 'none';
-      document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
-      document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : err.toString();
+      var msg = err.toString();
+      document.getElementById('errT').textContent = msg.indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
+      document.getElementById('errD').textContent = msg.indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : msg;
       document.getElementById('errbox').classList.add('show');
     });
 }
+
 function onCamOK(s) {
   stream = s;
   var vid = document.getElementById('liveVid');
   vid.srcObject = s;
   vid.style.display = 'block';
   document.getElementById('loadMsg').style.display = 'none';
+
   vid.onloadedmetadata = function() {
     vid.play();
     setStatus('Kamera siap. Klik rekam.', '');
@@ -132,28 +161,50 @@ function onCamOK(s) {
   };
 }
 
+// ==========================================
+// RECORD
+// ==========================================
 function doRec() {
   chunks = [];
   blob = null;
 
-  // Gunakan bitrate rendah agar file kecil
-  var options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 500000 };
-  if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-    options = { mimeType: 'video/webm', videoBitsPerSecond: 500000 };
+  var options = { videoBitsPerSecond: 500000 };
+
+  // Coba berbagai mimeType
+  var types = [
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4'
+  ];
+
+  var mtype = '';
+  for (var i = 0; i < types.length; i++) {
+    if (MediaRecorder.isTypeSupported(types[i])) {
+      mtype = types[i];
+      break;
+    }
   }
-  if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-    options = { mimeType: 'video/mp4', videoBitsPerSecond: 500000 };
+
+  if (mtype) {
+    options.mimeType = mtype;
   }
 
   try {
     recorder = new MediaRecorder(stream, options);
   } catch (e) {
-    try { recorder = new MediaRecorder(stream, { videoBitsPerSecond: 500000 }); }
-    catch (e2) { recorder = new MediaRecorder(stream); }
+    try {
+      recorder = new MediaRecorder(stream);
+    } catch (e2) {
+      setStatus('❌ Browser tidak support rekam video', 'err');
+      return;
+    }
   }
 
   recorder.ondataavailable = function(e) {
-    if (e.data && e.data.size > 0) chunks.push(e.data);
+    if (e.data && e.data.size > 0) {
+      chunks.push(e.data);
+    }
   };
 
   recorder.onstop = function() {
@@ -162,8 +213,10 @@ function doRec() {
     document.getElementById('playVid').style.display = 'block';
     document.getElementById('liveVid').style.display = 'none';
     clearInterval(timerInterval);
+
     var sz = (blob.size / 1048576).toFixed(2);
     setStatus('✅ ' + sz + ' MB | ' + fmtTime(seconds), 'ok');
+
     document.getElementById('btnStop').style.display = 'none';
     document.getElementById('btnSend').style.display = 'inline-flex';
     document.getElementById('btnRetry').style.display = 'inline-flex';
@@ -171,24 +224,31 @@ function doRec() {
   };
 
   recorder.start(1000);
+
   document.getElementById('btnRec').style.display = 'none';
   document.getElementById('btnStop').style.display = 'inline-flex';
   document.getElementById('btnCancel').style.display = 'none';
   setStatus('⏺️ Merekam...', '');
+
   seconds = 0;
   document.getElementById('timer').style.display = 'block';
   document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>00:00';
+
   timerInterval = setInterval(function() {
     seconds++;
     document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>' + fmtTime(seconds);
-    // Auto stop hanya jika ada batas
+
     if (MAX_SECONDS > 0 && seconds >= MAX_SECONDS) {
       doStop();
-      showToast('⏹️ Auto stop: max ' + MAX_SECONDS + ' detik');
+      showToast('⏹️ Max ' + MAX_SECONDS + ' detik');
     }
+  }, 1000);
+}
 
 function doStop() {
-  if (recorder && recorder.state !== 'inactive') recorder.stop();
+  if (recorder && recorder.state !== 'inactive') {
+    recorder.stop();
+  }
 }
 
 function doRetry() {
@@ -203,76 +263,76 @@ function doRetry() {
   setStatus('Kamera siap.', '');
 }
 
+// ==========================================
+// SEND VIDEO
+// ==========================================
 function doSend() {
   if (!blob) return;
 
   document.getElementById('btnSend').disabled = true;
-  document.getElementById('btnSend').textContent = '⏳ Menyimpan...';
-  setStatus('⏳ Menyimpan video...', '');
-
-  // Coba postMessage dulu (mungkin jalan di beberapa browser)
-  if (window.opener) {
-    try {
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          window.opener.postMessage({
-            source: 'packing-recorder',
-            action: 'video-result',
-            dataUrl: e.target.result,
-            size: blob.size,
-            type: blob.type
-          }, '*');
-          showToast('✅ Video dikirim!');
-          stopCam();
-          setTimeout(function() { window.close(); }, 800);
-        } catch (err) {
-          // postMessage gagal, fallback ke download
-          downloadAndClose();
-        }
-      };
-      reader.readAsDataURL(blob);
-      return;
-    } catch (e) {}
-  }
-
-  // Fallback: download
-  downloadAndClose();
-}
-
-function downloadAndClose() {
-  var fileName = 'packing_video_' + Date.now() + '.webm';
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  a.click();
-
-  setStatus('✅ Video tersimpan! Klik "Pilih File" di form utama.', 'ok');
-  showToast('📥 Video didownload: ' + fileName);
-
-  document.getElementById('btnSend').disabled = false;
-  document.getElementById('btnSend').textContent = '✅ Tersimpan';
-  document.getElementById('btnSend').style.display = 'none';
+  document.getElementById('btnSend').textContent = '⏳ Mengirim...';
   document.getElementById('btnRetry').style.display = 'none';
+  setStatus('⏳ Mengirim video...', '');
 
-  // Tampilkan instruksi
-  var btnsEl = document.querySelector('.btns');
-  var infoBtn = document.createElement('button');
-  infoBtn.className = 'btn btn-ok';
-  infoBtn.textContent = '👍 OK, Tutup';
-  infoBtn.onclick = function() {
-    stopCam();
-    try { window.close(); } catch (e) {}
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+
+    // Coba kirim via postMessage
+    if (window.opener) {
+      try {
+        window.opener.postMessage({
+          source: 'packing-recorder',
+          action: 'video-result',
+          dataUrl: dataUrl,
+          size: blob.size,
+          type: blob.type
+        }, '*');
+        showToast('✅ Video dikirim!');
+        stopCam();
+        setTimeout(function() { window.close(); }, 800);
+        return;
+      } catch (err) {
+        // postMessage gagal, fallback ke download
+      }
+    }
+
+    // Fallback: download file
+    var fileName = 'packing_video_' + Date.now() + '.webm';
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+
+    setStatus('✅ Video tersimpan! Klik "Pilih File" di form utama.', 'ok');
+    showToast('📥 Video didownload: ' + fileName);
+
+    document.getElementById('btnSend').textContent = '✅ Tersimpan';
+    document.getElementById('btnSend').disabled = true;
+
+    setTimeout(function() {
+      stopCam();
+      try { window.close(); } catch (e) {}
+    }, 3000);
   };
-  btnsEl.innerHTML = '';
-  btnsEl.appendChild(infoBtn);
+  reader.readAsDataURL(blob);
 }
 
+// ==========================================
+// CLEANUP
+// ==========================================
 function stopCam() {
   if (timerInterval) clearInterval(timerInterval);
-  if (recorder && recorder.state !== 'inactive') try { recorder.stop(); } catch (e) {}
-  if (stream) { try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {} stream = null; }
+  if (recorder && recorder.state !== 'inactive') {
+    try { recorder.stop(); } catch (e) {}
+  }
+  if (stream) {
+    try {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+    } catch (e) {}
+    stream = null;
+  }
 }
 
 function doClose() {
@@ -281,8 +341,16 @@ function doClose() {
   setTimeout(function() { window.history.back(); }, 300);
 }
 
-window.addEventListener('load', function() { startCam(); });
-window.addEventListener('beforeunload', function() { stopCam(); });
+// ==========================================
+// INIT
+// ==========================================
+window.addEventListener('load', function() {
+  startCam();
+});
+
+window.addEventListener('beforeunload', function() {
+  stopCam();
+});
 </script>
 </body>
 </html>
