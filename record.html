@@ -96,20 +96,29 @@ function startCam() {
   document.getElementById('liveVid').style.display = 'none';
   document.getElementById('playVid').style.display = 'none';
 
-  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(function(s) { onCamOK(s); })
-    .catch(function() {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        .then(function(s) { onCamOK(s); })
-        .catch(function(err) {
-          document.getElementById('loadMsg').style.display = 'none';
-          document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
-          document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : err.toString();
-          document.getElementById('errbox').classList.add('show');
+  // Minta VIDEO SAJA dulu (cepat!) Audio ditambah setelah kamera aktif
+  navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    .then(function(videoStream) {
+      // Kamera sudah aktif! Sekarang coba tambah audio
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(audioStream) {
+          // Gabungkan video + audio
+          var audioTrack = audioStream.getAudioTracks()[0];
+          videoStream.addTrack(audioTrack);
+          onCamOK(videoStream);
+        })
+        .catch(function() {
+          // Audio gagal, pakai video saja (tidak apa-apa)
+          onCamOK(videoStream);
         });
+    })
+    .catch(function(err) {
+      document.getElementById('loadMsg').style.display = 'none';
+      document.getElementById('errT').textContent = err.toString().indexOf('NotAllowed') >= 0 ? '🚫 Izin Ditolak' : '❌ Error';
+      document.getElementById('errD').textContent = err.toString().indexOf('NotAllowed') >= 0 ? 'Klik 🔒 → Camera → Allow' : err.toString();
+      document.getElementById('errbox').classList.add('show');
     });
 }
-
 function onCamOK(s) {
   stream = s;
   var vid = document.getElementById('liveVid');
