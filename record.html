@@ -5,49 +5,186 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Rekam Video</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f9;font-family:'Segoe UI',system-ui,sans-serif}
-.app{display:flex;flex-direction:column;height:100%}
-.bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#1e293b;flex-shrink:0}
-.bar h1{font-size:.9rem}
-.xbtn{background:#ef4444;border:none;color:#fff;width:38px;height:38px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.xbtn:active{transform:scale(.9)}
-.cam{flex:1;position:relative;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.cam video{width:100%;height:100%;object-fit:cover}
-.panel{padding:12px 14px;background:#1e293b;flex-shrink:0}
-.status{text-align:center;font-size:.85rem;color:#94a3b8;margin-bottom:10px}
-.status.ok{color:#10b981;font-weight:600}
-.status.err{color:#ef4444;font-weight:600}
-.btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.btn{padding:12px 20px;border:none;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
-.btn:active{transform:scale(.96)}
-.btn-rec{background:#ef4444;color:#fff;min-width:140px;justify-content:center}
-.btn-stop{background:#f59e0b;color:#fff}
-.btn-ok{background:#10b981;color:#fff}
-.btn-no{background:#64748b;color:#fff}
-.btn-retry{background:#3b82f6;color:#fff}
-.timer{font-size:1.8rem;font-weight:700;color:#ef4444;text-align:center;margin-bottom:10px}
-.rec-dot{display:inline-block;width:14px;height:14px;background:#ef4444;border-radius:50%;margin-right:8px;animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-.errbox{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:#0f172a;z-index:10;padding:24px;text-align:center;flex-direction:column;align-items:center;justify-content:center}
-.errbox.show{display:flex}
-.errbox .icon{font-size:3rem;margin-bottom:12px}
-.errbox .title{font-size:1rem;font-weight:700;color:#ef4444;margin-bottom:8px}
-.errbox .desc{font-size:.85rem;color:#94a3b8;margin-bottom:16px;line-height:1.6}
-.loading{display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:.9rem;flex-direction:column;gap:12px}
-.spinner{width:30px;height:30px;border:3px solid #334155;border-top-color:#ef4444;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:8px;font-weight:600;font-size:.85rem;display:none;z-index:100}
-.toast.show{display:block}
+/* ==================== RESET ==================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #0f172a;
+  color: #f1f5f9;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ==================== LAYOUT ==================== */
+.app { display: flex; flex-direction: column; height: 100%; }
+
+/* ==================== TOP BAR ==================== */
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #1e293b;
+  flex-shrink: 0;
+}
+.bar h1 { font-size: .9rem; }
+.xbtn {
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.xbtn:active { transform: scale(.9); }
+
+/* ==================== CAMERA AREA ==================== */
+.cam {
+  flex: 1;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cam video { width: 100%; height: 100%; object-fit: cover; }
+
+/* ==================== BOTTOM PANEL ==================== */
+.panel {
+  padding: 12px 14px;
+  background: #1e293b;
+  flex-shrink: 0;
+}
+
+/* ==================== STATUS ==================== */
+.status {
+  text-align: center;
+  font-size: .85rem;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+.status.ok { color: #10b981; font-weight: 600; }
+.status.err { color: #ef4444; font-weight: 600; }
+
+/* ==================== BUTTONS ==================== */
+.btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.btn:active { transform: scale(.96); }
+.btn-rec { background: #ef4444; color: #fff; min-width: 140px; justify-content: center; }
+.btn-stop { background: #f59e0b; color: #fff; }
+.btn-ok { background: #10b981; color: #fff; }
+.btn-no { background: #64748b; color: #fff; }
+.btn-retry { background: #3b82f6; color: #fff; }
+
+/* ==================== TIMER ==================== */
+.timer {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ef4444;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.rec-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: #ef4444;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: blink 1s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ==================== ERROR BOX ==================== */
+.errbox {
+  display: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #0f172a;
+  z-index: 10;
+  padding: 24px;
+  text-align: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.errbox.show { display: flex; }
+.errbox .icon { font-size: 3rem; margin-bottom: 12px; }
+.errbox .title { font-size: 1rem; font-weight: 700; color: #ef4444; margin-bottom: 8px; }
+.errbox .desc { font-size: .85rem; color: #94a3b8; margin-bottom: 16px; line-height: 1.6; }
+
+/* ==================== LOADING ==================== */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #94a3b8;
+  font-size: .9rem;
+  flex-direction: column;
+  gap: 12px;
+}
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #334155;
+  border-top-color: #ef4444;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==================== TOAST ==================== */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: .85rem;
+  display: none;
+  z-index: 100;
+}
+.toast.show { display: block; }
 </style>
 </head>
 <body>
+
 <div class="app">
+  <!-- ===== TOP BAR ===== -->
   <div class="bar">
     <h1>🎥 Rekam Video</h1>
     <button class="xbtn" onclick="doClose()">✕</button>
   </div>
 
+  <!-- ===== CAMERA ===== -->
   <div class="cam">
     <video id="liveVid" autoplay muted playsinline style="display:none"></video>
     <video id="playVid" controls playsinline style="display:none;width:100%;height:100%;object-fit:contain"></video>
@@ -67,6 +204,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     </div>
   </div>
 
+  <!-- ===== PANEL ===== -->
   <div class="panel">
     <div class="timer" id="timer" style="display:none">
       <span class="rec-dot"></span>00:00
@@ -75,7 +213,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
     <div class="btns">
       <button class="btn btn-rec" id="btnRec" onclick="doRec()" style="display:none">⏺️ Rekam</button>
       <button class="btn btn-stop" id="btnStop" onclick="doStop()" style="display:none">⏹️ Stop</button>
-      <button class="btn btn-ok" id="btnSend" onclick="doSend()" style="display:none">✅ Kirim</button>
+      <button class="btn btn-ok" id="btnSend" onclick="doSend()" style="display:none">✅ Simpan & Kirim</button>
       <button class="btn btn-retry" id="btnRetry" onclick="doRetry()" style="display:none">🔄 Ulang</button>
       <button class="btn btn-no" id="btnCancel" onclick="doClose()">✕ Batal</button>
     </div>
@@ -85,14 +223,19 @@ html,body{height:100%;width:100%;overflow:hidden;background:#0f172a;color:#f1f5f
 <div class="toast" id="toast"></div>
 
 <script>
+// ================================================================
+// VARIABLES
+// ================================================================
 var stream = null;
 var recorder = null;
 var chunks = [];
 var blob = null;
 var timerInterval = null;
 var seconds = 0;
-var MAX_SECONDS = 60;
 
+// ================================================================
+// UTILITY
+// ================================================================
 function showToast(m) {
   var t = document.getElementById('toast');
   t.textContent = m;
@@ -109,22 +252,22 @@ function fmtTime(s) {
   return Math.floor(s / 60).toString().padStart(2, '0') + ':' + (s % 60).toString().padStart(2, '0');
 }
 
-// ==========================================
-// START CAMERA - VIDEO ONLY (CEPAT!)
-// ==========================================
+// ================================================================
+// START CAMERA (video only = cepat!)
+// ================================================================
 function startCam() {
   document.getElementById('loadMsg').style.display = 'flex';
   document.getElementById('errbox').classList.remove('show');
   document.getElementById('liveVid').style.display = 'none';
   document.getElementById('playVid').style.display = 'none';
 
-  // Minta VIDEO SAJA (tanpa audio) → jauh lebih cepat
+  // Minta video saja dulu (cepat)
   navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     .then(function(vidStream) {
-      // Kamera sudah aktif! Tampilkan dulu
+      // Kamera aktif! Tampilkan
       onCamOK(vidStream);
 
-      // Lalu coba tambah audio di background (tidak blocking)
+      // Tambah audio di background (tidak blocking)
       try {
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then(function(audioStream) {
@@ -133,9 +276,7 @@ function startCam() {
               stream.addTrack(audioTrack);
             }
           })
-          .catch(function() {
-            // Audio gagal, tidak apa-apa
-          });
+          .catch(function() { /* Audio gagal, tidak apa-apa */ });
       } catch (e) {}
     })
     .catch(function(err) {
@@ -161,50 +302,30 @@ function onCamOK(s) {
   };
 }
 
-// ==========================================
+// ================================================================
 // RECORD
-// ==========================================
+// ================================================================
 function doRec() {
   chunks = [];
   blob = null;
 
+  // Bitrate rendah agar file kecil
   var options = { videoBitsPerSecond: 500000 };
-
-  // Coba berbagai mimeType
-  var types = [
-    'video/webm;codecs=vp8,opus',
-    'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4'
-  ];
-
+  var types = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   var mtype = '';
   for (var i = 0; i < types.length; i++) {
-    if (MediaRecorder.isTypeSupported(types[i])) {
-      mtype = types[i];
-      break;
-    }
+    if (MediaRecorder.isTypeSupported(types[i])) { mtype = types[i]; break; }
   }
+  if (mtype) options.mimeType = mtype;
 
-  if (mtype) {
-    options.mimeType = mtype;
-  }
-
-  try {
-    recorder = new MediaRecorder(stream, options);
-  } catch (e) {
-    try {
-      recorder = new MediaRecorder(stream);
-    } catch (e2) {
-      setStatus('❌ Browser tidak support rekam video', 'err');
-      return;
-    }
+  try { recorder = new MediaRecorder(stream, options); }
+  catch (e) {
+    try { recorder = new MediaRecorder(stream); }
+    catch (e2) { setStatus('❌ Browser tidak support rekam', 'err'); return; }
   }
 
   recorder.ondataavailable = function(e) {
-    if (e.data && e.data.size > 0) {
-      chunks.push(e.data);
-    }
+    if (e.data && e.data.size > 0) chunks.push(e.data);
   };
 
   recorder.onstop = function() {
@@ -216,7 +337,6 @@ function doRec() {
 
     var sz = (blob.size / 1048576).toFixed(2);
     setStatus('✅ ' + sz + ' MB | ' + fmtTime(seconds), 'ok');
-
     document.getElementById('btnStop').style.display = 'none';
     document.getElementById('btnSend').style.display = 'inline-flex';
     document.getElementById('btnRetry').style.display = 'inline-flex';
@@ -224,7 +344,6 @@ function doRec() {
   };
 
   recorder.start(1000);
-
   document.getElementById('btnRec').style.display = 'none';
   document.getElementById('btnStop').style.display = 'inline-flex';
   document.getElementById('btnCancel').style.display = 'none';
@@ -233,22 +352,14 @@ function doRec() {
   seconds = 0;
   document.getElementById('timer').style.display = 'block';
   document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>00:00';
-
   timerInterval = setInterval(function() {
     seconds++;
     document.getElementById('timer').innerHTML = '<span class="rec-dot"></span>' + fmtTime(seconds);
-
-    if (MAX_SECONDS > 0 && seconds >= MAX_SECONDS) {
-      doStop();
-      showToast('⏹️ Max ' + MAX_SECONDS + ' detik');
-    }
   }, 1000);
 }
 
 function doStop() {
-  if (recorder && recorder.state !== 'inactive') {
-    recorder.stop();
-  }
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
 }
 
 function doRetry() {
@@ -263,74 +374,59 @@ function doRetry() {
   setStatus('Kamera siap.', '');
 }
 
-// ==========================================
-// SEND VIDEO
-// ==========================================
+// ================================================================
+// SEND (Download otomatis)
+// ================================================================
 function doSend() {
   if (!blob) return;
 
   document.getElementById('btnSend').disabled = true;
-  document.getElementById('btnSend').textContent = '⏳ Mengirim...';
+  document.getElementById('btnSend').textContent = '⏳ Menyimpan...';
   document.getElementById('btnRetry').style.display = 'none';
-  setStatus('⏳ Mengirim video...', '');
+  setStatus('⏳ Menyimpan video...', '');
 
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var dataUrl = e.target.result;
+  // Buat nama file
+  var now = new Date();
+  var fileName = 'packing_'
+    + now.getFullYear()
+    + (now.getMonth() + 1).toString().padStart(2, '0')
+    + now.getDate().toString().padStart(2, '0')
+    + '_'
+    + now.getHours().toString().padStart(2, '0')
+    + now.getMinutes().toString().padStart(2, '0')
+    + now.getSeconds().toString().padStart(2, '0')
+    + '.webm';
 
-    // Coba kirim via postMessage
-    if (window.opener) {
-      try {
-        window.opener.postMessage({
-          source: 'packing-recorder',
-          action: 'video-result',
-          dataUrl: dataUrl,
-          size: blob.size,
-          type: blob.type
-        }, '*');
-        showToast('✅ Video dikirim!');
-        stopCam();
-        setTimeout(function() { window.close(); }, 800);
-        return;
-      } catch (err) {
-        // postMessage gagal, fallback ke download
-      }
-    }
+  // Download otomatis
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 
-    // Fallback: download file
-    var fileName = 'packing_video_' + Date.now() + '.webm';
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
+  var sz = (blob.size / 1048576).toFixed(2);
+  setStatus('✅ Video tersimpan! (' + sz + ' MB)', 'ok');
+  showToast('📥 ' + fileName + ' tersimpan!');
 
-    setStatus('✅ Video tersimpan! Klik "Pilih File" di form utama.', 'ok');
-    showToast('📥 Video didownload: ' + fileName);
-
-    document.getElementById('btnSend').textContent = '✅ Tersimpan';
-    document.getElementById('btnSend').disabled = true;
-
-    setTimeout(function() {
-      stopCam();
-      try { window.close(); } catch (e) {}
-    }, 3000);
-  };
-  reader.readAsDataURL(blob);
+  // Tutup otomatis setelah 2 detik
+  setTimeout(function() {
+    stopCam();
+    try { window.close(); } catch (e) {}
+  }, 2000);
 }
 
-// ==========================================
+// ================================================================
 // CLEANUP
-// ==========================================
+// ================================================================
 function stopCam() {
   if (timerInterval) clearInterval(timerInterval);
   if (recorder && recorder.state !== 'inactive') {
     try { recorder.stop(); } catch (e) {}
   }
   if (stream) {
-    try {
-      stream.getTracks().forEach(function(t) { t.stop(); });
-    } catch (e) {}
+    try { stream.getTracks().forEach(function(t) { t.stop(); }); } catch (e) {}
     stream = null;
   }
 }
@@ -341,9 +437,9 @@ function doClose() {
   setTimeout(function() { window.history.back(); }, 300);
 }
 
-// ==========================================
+// ================================================================
 // INIT
-// ==========================================
+// ================================================================
 window.addEventListener('load', function() {
   startCam();
 });
