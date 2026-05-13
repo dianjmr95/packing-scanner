@@ -29,6 +29,14 @@ html, body {
   flex-shrink: 0;
 }
 .bar h1 { font-size: .9rem; }
+.bar .order-label {
+  font-size: .7rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(16,185,129,.2);
+  color: #6ee7b7;
+  margin-left: 8px;
+}
 .xbtn {
   background: #ef4444;
   border: none;
@@ -44,7 +52,7 @@ html, body {
 }
 .xbtn:active { transform: scale(.9); }
 
-/* ==================== CAMERA AREA ==================== */
+/* ==================== CAMERA ==================== */
 .cam {
   flex: 1;
   position: relative;
@@ -56,7 +64,7 @@ html, body {
 }
 .cam video { width: 100%; height: 100%; object-fit: cover; }
 
-/* ==================== BOTTOM PANEL ==================== */
+/* ==================== PANEL ==================== */
 .panel {
   padding: 12px 14px;
   background: #1e293b;
@@ -118,7 +126,7 @@ html, body {
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-/* ==================== ERROR BOX ==================== */
+/* ==================== ERROR ==================== */
 .errbox {
   display: none;
   position: absolute;
@@ -180,7 +188,7 @@ html, body {
 <div class="app">
   <!-- ===== TOP BAR ===== -->
   <div class="bar">
-    <h1>🎥 Rekam Video</h1>
+    <h1>🎥 Rekam Video <span class="order-label" id="orderLabel"></span></h1>
     <button class="xbtn" onclick="doClose()">✕</button>
   </div>
 
@@ -223,6 +231,17 @@ html, body {
 <div class="toast" id="toast"></div>
 
 <script>
+// ================================================================
+// GET ORDER NUMBER FROM URL
+// ================================================================
+var params = new URLSearchParams(location.search);
+var orderNo = params.get('order') || '';
+
+// Tampilkan order number di header
+if (orderNo) {
+  document.getElementById('orderLabel').textContent = '#' + orderNo;
+}
+
 // ================================================================
 // VARIABLES
 // ================================================================
@@ -267,7 +286,7 @@ function startCam() {
       // Kamera aktif! Tampilkan
       onCamOK(vidStream);
 
-      // Tambah audio di background (tidak blocking)
+      // Tambah audio di background
       try {
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then(function(audioStream) {
@@ -311,15 +330,24 @@ function doRec() {
 
   // Bitrate rendah agar file kecil
   var options = { videoBitsPerSecond: 500000 };
-  var types = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+  var types = [
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4'
+  ];
   var mtype = '';
   for (var i = 0; i < types.length; i++) {
-    if (MediaRecorder.isTypeSupported(types[i])) { mtype = types[i]; break; }
+    if (MediaRecorder.isTypeSupported(types[i])) {
+      mtype = types[i];
+      break;
+    }
   }
   if (mtype) options.mimeType = mtype;
 
-  try { recorder = new MediaRecorder(stream, options); }
-  catch (e) {
+  try {
+    recorder = new MediaRecorder(stream, options);
+  } catch (e) {
     try { recorder = new MediaRecorder(stream); }
     catch (e2) { setStatus('❌ Browser tidak support rekam', 'err'); return; }
   }
@@ -375,7 +403,7 @@ function doRetry() {
 }
 
 // ================================================================
-// SEND (Download otomatis)
+// SEND (Download dengan nama file = no pesanan)
 // ================================================================
 function doSend() {
   if (!blob) return;
@@ -385,17 +413,21 @@ function doSend() {
   document.getElementById('btnRetry').style.display = 'none';
   setStatus('⏳ Menyimpan video...', '');
 
-  // Buat nama file
+  // Bersihkan no pesanan untuk nama file
+  var safeOrder = orderNo.replace(/[^a-zA-Z0-9_\-]/g, '_') || 'packing';
+
+  // Buat timestamp
   var now = new Date();
-  var fileName = 'packing_'
-    + now.getFullYear()
+  var dateStr = now.getFullYear().toString()
     + (now.getMonth() + 1).toString().padStart(2, '0')
     + now.getDate().toString().padStart(2, '0')
     + '_'
     + now.getHours().toString().padStart(2, '0')
     + now.getMinutes().toString().padStart(2, '0')
-    + now.getSeconds().toString().padStart(2, '0')
-    + '.webm';
+    + now.getSeconds().toString().padStart(2, '0');
+
+  // Nama file: packing_[no_pesanan]_[tanggal_waktu].webm
+  var fileName = 'packing_' + safeOrder + '_' + dateStr + '.webm';
 
   // Download otomatis
   var url = URL.createObjectURL(blob);
@@ -408,7 +440,7 @@ function doSend() {
 
   var sz = (blob.size / 1048576).toFixed(2);
   setStatus('✅ Video tersimpan! (' + sz + ' MB)', 'ok');
-  showToast('📥 ' + fileName + ' tersimpan!');
+  showToast('📥 ' + fileName);
 
   // Tutup otomatis setelah 2 detik
   setTimeout(function() {
