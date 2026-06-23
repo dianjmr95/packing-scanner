@@ -38,6 +38,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  min-height: 300px;
 }
 video {
   width: 100%;
@@ -174,6 +175,62 @@ video {
   font-weight: 600;
   margin-left: 6px;
 }
+.quality-selector {
+  background: #1e293b;
+  padding: 10px 16px;
+  text-align: center;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  font-size: .82rem;
+}
+.quality-btn {
+  background: #334155;
+  color: #cbd5e1;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.quality-btn.active {
+  background: #1a73e8;
+  color: #fff;
+}
+.processing-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  flex-direction: column;
+  gap: 16px;
+}
+.processing-overlay.show { display: flex; }
+.processing-overlay .big-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(255,255,255,.2);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.processing-overlay p {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+.processing-overlay small {
+  color: #cbd5e1;
+  font-size: .82rem;
+}
 </style>
 </head>
 <body>
@@ -186,6 +243,13 @@ video {
 <div class="order-info">
   📦 Order: <strong id="orderName">-</strong>
   <span class="format-badge" id="formatBadge">MP4</span>
+</div>
+
+<div class="quality-selector">
+  ⚙️ Kualitas:
+  <button class="quality-btn" data-q="low" onclick="setQuality('low')">📱 Hemat</button>
+  <button class="quality-btn active" data-q="medium" onclick="setQuality('medium')">⚖️ Normal</button>
+  <button class="quality-btn" data-q="high" onclick="setQuality('high')">💎 Jernih</button>
 </div>
 
 <div class="error-box" id="errorBox"></div>
@@ -208,49 +272,60 @@ video {
   </button>
 </div>
 
+<div class="processing-overlay" id="processingOverlay">
+  <div class="big-spinner"></div>
+  <p id="processingText">Memproses video...</p>
+  <small id="processingSub">Mohon tunggu, jangan tutup halaman</small>
+</div>
+
 <script>
-// ================================================================
-// CONFIG
-// ================================================================
 var stream = null;
 var recorder = null;
 var chunks = [];
 var startTime = 0;
 var timerInterval = null;
 var recordedBlob = null;
-var currentFacingMode = 'environment'; // 'user' for front, 'environment' for back
+var currentFacingMode = 'environment';
 var mimeType = '';
 var fileExtension = '';
 
-// Ambil nama order dari URL
+// ★ Quality settings ★
+var qualityPresets = {
+  low:    { width: 640,  height: 480,  bitrate: 600000  }, // 0.6 Mbps
+  medium: { width: 1280, height: 720,  bitrate: 1500000 }, // 1.5 Mbps
+  high:   { width: 1920, height: 1080, bitrate: 3000000 }  // 3.0 Mbps
+};
+var currentQuality = 'medium';
+
 var urlParams = new URLSearchParams(window.location.search);
 var orderName = urlParams.get('order') || 'video';
 document.getElementById('orderName').textContent = orderName;
 
-// ================================================================
-// DETECT BEST MIME TYPE
-// Prioritas: MP4 (paling kompatibel) > WebM
-// ================================================================
+function setQuality(q) {
+  currentQuality = q;
+  document.querySelectorAll('.quality-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-q') === q);
+  });
+  // Restart camera dengan resolusi baru
+  if (stream) startCam();
+}
+
 function detectMimeType() {
   var candidates = [
-    // MP4 - paling kompatibel
     { mime: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', ext: 'mp4' },
     { mime: 'video/mp4; codecs="avc1.42E01E"',            ext: 'mp4' },
     { mime: 'video/mp4',                                   ext: 'mp4' },
-    // WebM dengan H.264 (kompatibel)
     { mime: 'video/webm; codecs="h264, opus"',            ext: 'webm' },
     { mime: 'video/webm; codecs="h264"',                  ext: 'webm' },
-    // WebM dengan VP9
     { mime: 'video/webm; codecs="vp9, opus"',             ext: 'webm' },
     { mime: 'video/webm; codecs="vp9"',                   ext: 'webm' },
-    // WebM dengan VP8 (paling banyak didukung)
     { mime: 'video/webm; codecs="vp8, opus"',             ext: 'webm' },
     { mime: 'video/webm; codecs="vp8"',                   ext: 'webm' },
     { mime: 'video/webm',                                  ext: 'webm' }
   ];
 
   for (var i = 0; i < candidates.length; i++) {
-    if (MediaRecorder.isTypeSupported(candidates[i].mime)) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(candidates[i].mime)) {
       mimeType = candidates[i].mime;
       fileExtension = candidates[i].ext;
       console.log('✅ Format terpilih:', mimeType);
@@ -260,33 +335,27 @@ function detectMimeType() {
   return false;
 }
 
-// ================================================================
-// START CAMERA
-// ================================================================
 async function startCam() {
   try {
     document.getElementById('errorBox').classList.remove('show');
     document.getElementById('status').textContent = '🔄 Memuat kamera...';
 
-    // Stop stream lama jika ada
     if (stream) {
       stream.getTracks().forEach(function(t) { t.stop(); });
     }
 
-    // Detect format yang didukung
     if (!detectMimeType()) {
       throw new Error('Browser tidak mendukung recording video');
     }
 
-    // Update badge format
     document.getElementById('formatBadge').textContent = fileExtension.toUpperCase();
 
-    // Request camera + audio
+    var preset = qualityPresets[currentQuality];
     var constraints = {
       video: {
         facingMode: currentFacingMode,
-        width:  { ideal: 1280 },
-        height: { ideal: 720 }
+        width:  { ideal: preset.width  },
+        height: { ideal: preset.height }
       },
       audio: true
     };
@@ -295,9 +364,9 @@ async function startCam() {
 
     var video = document.getElementById('preview');
     video.srcObject = stream;
-    video.muted = true; // Penting agar tidak feedback audio
+    video.muted = true;
 
-    document.getElementById('status').textContent = '✅ Siap merekam';
+    document.getElementById('status').textContent = '✅ Siap (' + preset.height + 'p)';
     document.getElementById('btnRec').disabled = false;
 
   } catch (err) {
@@ -318,17 +387,11 @@ function showError(msg) {
   el.classList.add('show');
 }
 
-// ================================================================
-// FLIP CAMERA (Front / Back)
-// ================================================================
 function flipCamera() {
   currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
   startCam();
 }
 
-// ================================================================
-// START RECORDING
-// ================================================================
 function startRec() {
   if (!stream) { showError('Kamera belum siap'); return; }
 
@@ -337,7 +400,16 @@ function startRec() {
   document.getElementById('previewInfo').classList.remove('show');
 
   try {
-    recorder = new MediaRecorder(stream, { mimeType: mimeType });
+    var preset = qualityPresets[currentQuality];
+    
+    // ★ Pakai bitrate sesuai quality ★
+    var options = {
+      mimeType: mimeType,
+      videoBitsPerSecond: preset.bitrate,
+      audioBitsPerSecond: 128000 // 128 kbps audio
+    };
+
+    recorder = new MediaRecorder(stream, options);
 
     recorder.ondataavailable = function(e) {
       if (e.data && e.data.size > 0) chunks.push(e.data);
@@ -348,14 +420,13 @@ function startRec() {
       showPreview();
     };
 
-    recorder.start(1000); // chunk per 1 detik
+    recorder.start(1000);
     startTime = Date.now();
     startTimer();
 
     document.getElementById('status').textContent = '🔴 Sedang merekam';
     document.getElementById('timer').classList.add('show');
 
-    // Ganti tombol jadi STOP
     document.getElementById('controls').innerHTML =
       '<button class="btn btn-stop" onclick="stopRec()">' +
       '<span style="width:12px;height:12px;background:#fff;display:inline-block"></span>' +
@@ -367,9 +438,6 @@ function startRec() {
   }
 }
 
-// ================================================================
-// STOP RECORDING
-// ================================================================
 function stopRec() {
   if (recorder && recorder.state !== 'inactive') {
     recorder.stop();
@@ -379,9 +447,6 @@ function stopRec() {
   document.getElementById('status').textContent = '⏸️ Memproses video...';
 }
 
-// ================================================================
-// TIMER
-// ================================================================
 function startTimer() {
   timerInterval = setInterval(function() {
     var elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -395,18 +460,13 @@ function stopTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
 
-// ================================================================
-// SHOW PREVIEW after stop
-// ================================================================
 function showPreview() {
   if (!recordedBlob) return;
 
-  // Stop kamera live
   if (stream) {
     stream.getTracks().forEach(function(t) { t.stop(); });
   }
 
-  // Show preview
   var video = document.getElementById('preview');
   video.srcObject = null;
   video.src = URL.createObjectURL(recordedBlob);
@@ -418,15 +478,11 @@ function showPreview() {
   document.getElementById('status').textContent = '✅ Selesai (' + sizeMB + ' MB)';
   document.getElementById('previewInfo').classList.add('show');
 
-  // Ganti tombol
   document.getElementById('controls').innerHTML =
     '<button class="btn btn-retry" onclick="resetRec()">🔄 Rekam Ulang</button>' +
     '<button class="btn btn-download" onclick="downloadVideo()">💾 Download Video</button>';
 }
 
-// ================================================================
-// DOWNLOAD VIDEO
-// ================================================================
 function downloadVideo() {
   if (!recordedBlob) return;
 
@@ -442,16 +498,12 @@ function downloadVideo() {
 
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 
-  // Tampilkan instruksi
   document.getElementById('previewInfo').innerHTML =
     '✅ <strong>Berhasil download!</strong><br>' +
     '<small>File: ' + fileName + '</small><br>' +
     '<small>Tutup halaman ini lalu pilih file di form web</small>';
 }
 
-// ================================================================
-// RESET (Rekam Ulang)
-// ================================================================
 function resetRec() {
   if (recordedBlob) {
     recordedBlob = null;
@@ -465,7 +517,6 @@ function resetRec() {
   document.getElementById('previewInfo').classList.remove('show');
   document.getElementById('timerText').textContent = '00:00';
 
-  // Restore tombol
   document.getElementById('controls').innerHTML =
     '<button class="btn btn-flip" id="btnFlip" onclick="flipCamera()" title="Ganti Kamera">🔄</button>' +
     '<button class="btn btn-rec" id="btnRec" onclick="startRec()">' +
@@ -475,9 +526,6 @@ function resetRec() {
   startCam();
 }
 
-// ================================================================
-// STOP CAMERA on unload
-// ================================================================
 function stopCam() {
   if (recorder && recorder.state !== 'inactive') {
     try { recorder.stop(); } catch(e) {}
@@ -488,9 +536,6 @@ function stopCam() {
   stopTimer();
 }
 
-// ================================================================
-// INIT
-// ================================================================
 window.addEventListener('load', function() { startCam(); });
 window.addEventListener('beforeunload', function() { stopCam(); });
 </script>
