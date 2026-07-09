@@ -40,12 +40,23 @@ body {
   overflow: hidden;
   min-height: 300px;
 }
-video {
+video, canvas {
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: #000;
 }
+/* Video sumber kamera disembunyikan dari layar (dipakai hanya sebagai
+   sumber gambar untuk digambar ulang ke canvas), tapi tetap "hidup"
+   supaya browser tidak menghentikan decoding-nya. */
+#sourceVideo {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+}
+#playbackVideo { display: none; }
 .timer {
   position: absolute;
   top: 16px;
@@ -155,16 +166,6 @@ video {
   display: none;
 }
 .error-box.show { display: block; }
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255,255,255,.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  display: inline-block;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
 .format-badge {
   display: inline-block;
   background: rgba(16, 185, 129, .2);
@@ -201,36 +202,7 @@ video {
   background: #1a73e8;
   color: #fff;
 }
-.processing-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,.85);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  flex-direction: column;
-  gap: 16px;
-}
-.processing-overlay.show { display: flex; }
-.processing-overlay .big-spinner {
-  width: 60px;
-  height: 60px;
-  border: 5px solid rgba(255,255,255,.2);
-  border-top-color: #60a5fa;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-.processing-overlay p {
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  text-align: center;
-}
-.processing-overlay small {
-  color: #cbd5e1;
-  font-size: .82rem;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -255,7 +227,9 @@ video {
 <div class="error-box" id="errorBox"></div>
 
 <div class="video-wrap">
-  <video id="preview" autoplay playsinline muted></video>
+  <video id="sourceVideo" autoplay playsinline muted></video>
+  <canvas id="canvasPreview"></canvas>
+  <video id="playbackVideo" playsinline></video>
   <div class="timer" id="timer"><span class="dot"></span><span id="timerText">00:00</span></div>
   <div class="status" id="status">🔄 Memuat kamera...</div>
 </div>
@@ -272,12 +246,6 @@ video {
   </button>
 </div>
 
-<div class="processing-overlay" id="processingOverlay">
-  <div class="big-spinner"></div>
-  <p id="processingText">Memproses video...</p>
-  <small id="processingSub">Mohon tunggu, jangan tutup halaman</small>
-</div>
-
 <script>
 var stream = null;
 var recorder = null;
@@ -288,6 +256,13 @@ var recordedBlob = null;
 var currentFacingMode = 'environment';
 var mimeType = '';
 var fileExtension = '';
+
+// ★ Canvas / timestamp state ★
+var sourceVideo = document.getElementById('sourceVideo');
+var canvas = document.getElementById('canvasPreview');
+var ctx = canvas.getContext('2d');
+var rafId = null;
+var canvasStream = null;
 
 // ★ Quality settings ★
 var qualityPresets = {
@@ -306,7 +281,6 @@ function setQuality(q) {
   document.querySelectorAll('.quality-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-q') === q);
   });
-  // Restart camera dengan resolusi baru
   if (stream) startCam();
 }
 
@@ -340,6 +314,8 @@ async function startCam() {
     document.getElementById('errorBox').classList.remove('show');
     document.getElementById('status').textContent = '🔄 Memuat kamera...';
 
+    stopDrawLoop();
+
     if (stream) {
       stream.getTracks().forEach(function(t) { t.stop(); });
     }
@@ -362,9 +338,19 @@ async function startCam() {
 
     stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-    var video = document.getElementById('preview');
-    video.srcObject = stream;
-    video.muted = true;
+    sourceVideo.srcObject = stream;
+    sourceVideo.muted = true;
+    await sourceVideo.play().catch(function(){});
+
+    // Set ukuran canvas sesuai resolusi asli kamera
+    canvas.width = sourceVideo.videoWidth || preset.width;
+    canvas.height = sourceVideo.videoHeight || preset.height;
+
+    // Tampilkan canvas, sembunyikan hasil playback (kalau ada)
+    canvas.style.display = 'block';
+    document.getElementById('playbackVideo').style.display = 'none';
+
+    startDrawLoop();
 
     document.getElementById('status').textContent = '✅ Siap (' + preset.height + 'p)';
     document.getElementById('btnRec').disabled = false;
@@ -392,6 +378,51 @@ function flipCamera() {
   startCam();
 }
 
+// ★ Gambar frame kamera + timestamp ke canvas setiap frame ★
+function drawFrame() {
+  if (sourceVideo.readyState >= 2) {
+    ctx.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+    drawTimestampOverlay();
+  }
+  rafId = requestAnimationFrame(drawFrame);
+}
+
+function startDrawLoop() {
+  stopDrawLoop();
+  drawFrame();
+}
+
+function stopDrawLoop() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+function drawTimestampOverlay() {
+  var now = new Date();
+  var tanggal = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+  var jam = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  var line1 = '📦 ' + orderName;
+  var line2 = tanggal + '  ' + jam + ' WIB';
+
+  var fontSize = Math.max(14, Math.round(canvas.height * 0.032));
+  var padding = Math.round(fontSize * 0.6);
+  var barHeight = fontSize * 2 + padding * 2;
+
+  // Bar semi-transparan di bawah
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 ' + fontSize + 'px monospace';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,.8)';
+  ctx.shadowBlur = 4;
+
+  ctx.fillText(line1, padding, canvas.height - barHeight + padding);
+  ctx.fillText(line2, padding, canvas.height - barHeight + padding + fontSize + 4);
+  ctx.restore();
+}
+
 function startRec() {
   if (!stream) { showError('Kamera belum siap'); return; }
 
@@ -401,15 +432,20 @@ function startRec() {
 
   try {
     var preset = qualityPresets[currentQuality];
-    
-    // ★ Pakai bitrate sesuai quality ★
+
+    // ★ Rekam dari CANVAS (sudah ada timestamp), gabung dengan audio asli ★
+    canvasStream = canvas.captureStream(30);
+    var combinedStream = new MediaStream();
+    canvasStream.getVideoTracks().forEach(function(t) { combinedStream.addTrack(t); });
+    stream.getAudioTracks().forEach(function(t) { combinedStream.addTrack(t); });
+
     var options = {
       mimeType: mimeType,
       videoBitsPerSecond: preset.bitrate,
-      audioBitsPerSecond: 128000 // 128 kbps audio
+      audioBitsPerSecond: 128000
     };
 
-    recorder = new MediaRecorder(stream, options);
+    recorder = new MediaRecorder(combinedStream, options);
 
     recorder.ondataavailable = function(e) {
       if (e.data && e.data.size > 0) chunks.push(e.data);
@@ -463,16 +499,18 @@ function stopTimer() {
 function showPreview() {
   if (!recordedBlob) return;
 
+  stopDrawLoop();
   if (stream) {
     stream.getTracks().forEach(function(t) { t.stop(); });
   }
 
-  var video = document.getElementById('preview');
-  video.srcObject = null;
-  video.src = URL.createObjectURL(recordedBlob);
-  video.muted = false;
-  video.controls = true;
-  video.loop = false;
+  var playback = document.getElementById('playbackVideo');
+  canvas.style.display = 'none';
+  playback.style.display = 'block';
+  playback.src = URL.createObjectURL(recordedBlob);
+  playback.muted = false;
+  playback.controls = true;
+  playback.loop = false;
 
   var sizeMB = (recordedBlob.size / 1048576).toFixed(2);
   document.getElementById('status').textContent = '✅ Selesai (' + sizeMB + ' MB)';
@@ -510,9 +548,10 @@ function resetRec() {
     chunks = [];
   }
 
-  var video = document.getElementById('preview');
-  video.controls = false;
-  video.src = '';
+  var playback = document.getElementById('playbackVideo');
+  playback.controls = false;
+  playback.src = '';
+  playback.style.display = 'none';
 
   document.getElementById('previewInfo').classList.remove('show');
   document.getElementById('timerText').textContent = '00:00';
@@ -530,6 +569,7 @@ function stopCam() {
   if (recorder && recorder.state !== 'inactive') {
     try { recorder.stop(); } catch(e) {}
   }
+  stopDrawLoop();
   if (stream) {
     stream.getTracks().forEach(function(t) { t.stop(); });
   }
